@@ -75,7 +75,9 @@ if (existsSync(r2State)) {
   cpSync(r2State, r2Out, { recursive: true });
   r2Bytes = dirSize(r2Out);
 } else {
-  console.log("[backup] no local R2 state yet — skipping (upload a photo first)");
+  console.log(
+    "[backup] no local R2 state yet — skipping (upload a photo first)",
+  );
 }
 
 // 3) Manifest.
@@ -92,7 +94,9 @@ const manifest = {
 };
 writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2));
 
-console.log(`[backup] done · ${humanBytes(manifest.files["db.sql"])} db, ${humanBytes(r2Bytes)} r2`);
+console.log(
+  `[backup] done · ${humanBytes(manifest.files["db.sql"])} db, ${humanBytes(r2Bytes)} r2`,
+);
 console.log(`[backup] folder: ${outDir}`);
 
 function humanBytes(n) {

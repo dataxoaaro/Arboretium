@@ -32,10 +32,10 @@ once you're signed in). Create a property there before adding plants.
 
 ### What `pnpm start` runs
 
-| Process | Port | Purpose |
-| --- | --- | --- |
+| Process        | Port    | Purpose                         |
+| -------------- | ------- | ------------------------------- |
 | `wrangler dev` | `:8787` | Worker API + simulated D1/R2/KV |
-| `vite` (SPA) | `:5173` | The app — browse here |
+| `vite` (SPA)   | `:5173` | The app — browse here           |
 
 Both are managed by `concurrently`; Ctrl-C stops them together.
 
@@ -45,7 +45,7 @@ Both are managed by `concurrently`; Ctrl-C stops them together.
 
 Without a key the map falls back to free public tiles (OpenStreetMap for
 street view, Esri World Imagery for satellite). With an MML
-(*Maanmittauslaitos* — Finnish National Land Survey) key the satellite layer
+(_Maanmittauslaitos_ — Finnish National Land Survey) key the satellite layer
 upgrades to MML's `ortokuva` orthophotos (~50 cm resolution for Finland,
 freshly licensed) and street view uses MML `maastokartta` topographic tiles.
 
@@ -57,7 +57,7 @@ The key is free for personal/non-commercial use.
    (OmaTili — MML's account portal). Email + password, then click the
    verification link.
 
-2. **Generate a key.** Once signed in, look for *API-avaimet* / *API keys*
+2. **Generate a key.** Once signed in, look for _API-avaimet_ / _API keys_
    in the side menu and create a new key. Copy the UUID-style value.
 
    When the portal asks about Referer / domain restrictions, you can leave
@@ -82,8 +82,8 @@ The key is free for personal/non-commercial use.
    (or just `pnpm wrangler` if you're running the stack manually).
 
 5. **Verify.** In the admin property editor (`/admin/properties/new`), click
-   the *Satellite* toggle — the bottom-right attribution should now read
-   *© Maanmittauslaitos / NLS Finland*. To confirm without the UI:
+   the _Satellite_ toggle — the bottom-right attribution should now read
+   _© Maanmittauslaitos / NLS Finland_. To confirm without the UI:
 
    ```bash
    curl -s -b cookies.txt http://127.0.0.1:8787/map/config?layer=satellite | jq .source
@@ -95,10 +95,10 @@ The key is free for personal/non-commercial use.
 
 The admin map has a 3-way toggle: **Street · Sat (MML) · Sat (Esri)**.
 
-| Provider | Resolution at z=18 | Max zoom | Strength |
-| --- | --- | --- | --- |
-| **MML ortokuva** | ~60 cm/pixel | **18** (free tier) | Highest *native* res for Finland; fresh ortophotos updated on a 2–5-year cycle |
-| **Esri World Imagery** | ~30 cm to ~1 m | **19** | Wider zoom range; sometimes sharper at very-high zoom because z=19 is real, not upscaled |
+| Provider               | Resolution at z=18 | Max zoom           | Strength                                                                                 |
+| ---------------------- | ------------------ | ------------------ | ---------------------------------------------------------------------------------------- |
+| **MML ortokuva**       | ~60 cm/pixel       | **18** (free tier) | Highest _native_ res for Finland; fresh ortophotos updated on a 2–5-year cycle           |
+| **Esri World Imagery** | ~30 cm to ~1 m     | **19**             | Wider zoom range; sometimes sharper at very-high zoom because z=19 is real, not upscaled |
 
 MML's free WGS84_Pseudo-Mercator matrix set tops out at zoom 18 — verified
 via [WMTSCapabilities](https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/WMTSCapabilities.xml).
@@ -107,9 +107,10 @@ Esri serves real z=19 tiles in many areas, which often looks sharper at the
 very-high zoom levels you'll use for placing individual plants.
 
 **Practical recommendation:**
+
 - Drawing a property boundary or scanning a wide area → **MML** (better source res)
 - Placing individual plants at zoom 19+ → try both; **Esri** is often sharper at this scale
-- If you don't have an MML key set, the *Sat (MML)* button silently falls
+- If you don't have an MML key set, the _Sat (MML)_ button silently falls
   back to Esri and shows a small banner pointing back to this section.
 
 ### Notes
@@ -119,7 +120,7 @@ very-high zoom levels you'll use for placing individual plants.
   If you ever want to hide the key (e.g. to enforce per-user rate limits),
   the worker can proxy tiles instead.
 - Attribution is required by MML's licence; the worker already includes
-  *© Maanmittauslaitos / NLS Finland* in the tile config and MapLibre
+  _© Maanmittauslaitos / NLS Finland_ in the tile config and MapLibre
   renders it bottom-right of the map.
 - MML docs (English):
   <https://www.maanmittauslaitos.fi/en/rajapinnat/avoimien-aineistojen-rajapinnat>

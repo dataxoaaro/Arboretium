@@ -87,7 +87,6 @@ Depends on: `ARB-E1`. Can run in parallel with `ARB-E4` and `ARB-E5`.
 >
 > **Resolution unified at res-15 (May 2026):** the property hex picker (`AdminMap`) was originally res-13 while the plant validation (`worker/routes/plants.ts`) compared res-15 plant cells against `included_hexes` directly. That mismatch silently rejected every plant added through admin-created properties. Both sides now use res-15 (`RES_PICKER = RES_PLANT = 15`), with a 50,000-cell cap on the picker so a wildly-large polygon doesn't lock the browser.
 
-
 - [x] **ARB-050** — _Re-scoped to local-Worker admin routes (LOCAL_ADMIN-gated)._ See `worker/routes/admin.ts`. (§8.9)
 - [x] **ARB-051** — Admin shell: sidebar nav (Properties · Users · Backups). (§8.9)
 - [x] **ARB-052** — Properties list page (active + archived). (§8.9)
