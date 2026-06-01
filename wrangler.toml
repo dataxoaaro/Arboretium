@@ -1,0 +1,35 @@
+name = "arboretum-worker"
+main = "worker/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# --- Bindings (placeholders; real IDs filled in during ARB-E10 deploy) ---
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arboretum-dev"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "arboretum-photos-dev"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "0000000000000000000000000000000000"
+
+# --- Vars (non-secret config; secrets use `wrangler secret put`) ---
+
+[vars]
+# SPA dev origin. Admin lives under /admin in the same SPA — no separate origin.
+ALLOWED_ORIGIN = "http://127.0.0.1:5173"
+
+# --- Dev server settings ---
+
+[dev]
+ip = "127.0.0.1"
+port = 8787
+
+# --- Workers excluded from Pages build ---
+# (Pages build only takes `dist/` from the SPA; Worker is deployed separately.)

@@ -1,0 +1,15 @@
+# Local-development secrets for `wrangler dev`.
+# Copy this file to `.dev.vars` (which is .gitignored) and fill in real values.
+# In production these are set via `wrangler secret put <NAME>` (see plans/arboretum_prd.md §8.8).
+
+# Site password — gates self-registration (PRD §8.7). Should be a 4–6-word passphrase.
+SITE_PASSWORD=tile-otter-summer-rake-dev
+
+# JWT signing secret — should be 32+ random bytes. Generate with:
+#   openssl rand -base64 32
+JWT_SECRET=local-dev-jwt-secret-CHANGE-ME-32-bytes-min
+
+# MML WMTS API key (Finnish national land survey). Register at
+# https://avoindata.maanmittauslaitos.fi/ to obtain. Empty in dev is fine
+# until ARB-E4 wires up the map.
+MML_API_KEY=

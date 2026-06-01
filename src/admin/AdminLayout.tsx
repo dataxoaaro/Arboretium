@@ -1,0 +1,53 @@
+// Admin section layout: left rail with section nav, plus an <Outlet /> for
+// the current page. Mounted at /admin in src/App.tsx; nested routes render
+// inside this layout.
+//
+// Access in production: the worker's /admin/* endpoints 404 unless
+// LOCAL_ADMIN=true, so any signed-in user can navigate here but the API
+// calls will fail in prod. There is no SPA-side gate — `LOCAL_ADMIN` is
+// the single source of truth.
+
+import { NavLink, Outlet } from "react-router-dom";
+
+export function AdminLayout() {
+  return (
+    <div className="flex min-h-[calc(100vh-3.5rem)]">
+      <aside className="w-56 border-r border-black/10 bg-black/[0.02] flex flex-col">
+        <div className="px-4 py-4 border-b border-black/10">
+          <div className="text-sm font-semibold">Admin</div>
+          <div className="text-[11px] text-fg/60 mt-0.5">
+            Properties · Users · Backups
+          </div>
+        </div>
+        <nav className="flex-1 p-2 text-sm flex flex-col gap-1">
+          <NavItem to="/admin/properties">Properties</NavItem>
+          <NavItem to="/admin/users">Users</NavItem>
+          <NavItem to="/admin/backups">Backups</NavItem>
+        </nav>
+        <div className="px-4 py-3 border-t border-black/10 text-[11px] text-fg/60">
+          Endpoints 404 in prod unless <code>LOCAL_ADMIN=true</code>.
+        </div>
+      </aside>
+      <main className="flex-1 min-w-0">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `px-3 py-2 rounded-md transition-colors ${
+          isActive
+            ? "bg-black/10 font-medium text-fg"
+            : "text-fg/70 hover:bg-black/5 hover:text-fg"
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  );
+}

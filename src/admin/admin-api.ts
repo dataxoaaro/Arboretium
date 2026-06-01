@@ -1,0 +1,124 @@
+// Typed fetch wrappers for /api/admin/*. Mounted under /admin in the SPA
+// router. The worker's /admin/* endpoints 404 unless LOCAL_ADMIN=true, so in
+// production these calls fail and the UI surfaces the error — there's no
+// separate prod gate beyond the env var.
+
+import type {
+  AdminStats,
+  PropertyMember,
+  PropertyRow,
+  ResetLinkResult,
+  UserRow,
+} from "./admin-types";
+
+export class AdminApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`/api/admin${path}`, {
+    credentials: "include",
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new AdminApiError(
+      body?.error ?? `Request failed (${res.status})`,
+      res.status,
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
+export const adminApi = {
+  // properties
+  listProperties(): Promise<PropertyRow[]> {
+    return request("/properties");
+  },
+  createProperty(input: {
+    owner_id: string;
+    name: string;
+    boundary_geojson?: string | null;
+    included_hexes?: string;
+    center_lat?: number | null;
+    center_lng?: number | null;
+  }): Promise<PropertyRow> {
+    return request("/properties", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateProperty(
+    id: string,
+    input: Partial<{
+      name: string;
+      boundary_geojson: string | null;
+      included_hexes: string;
+      center_lat: number | null;
+      center_lng: number | null;
+      owner_id: string;
+    }>,
+  ): Promise<PropertyRow> {
+    return request(`/properties/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  archiveProperty(id: string): Promise<{ ok: true; archived_at: number }> {
+    return request(`/properties/${id}`, { method: "DELETE" });
+  },
+  restoreProperty(id: string): Promise<{ ok: true }> {
+    return request(`/properties/${id}/restore`, { method: "POST" });
+  },
+
+  // members
+  listMembers(propertyId: string): Promise<PropertyMember[]> {
+    return request(`/properties/${propertyId}/members`);
+  },
+  addMember(
+    propertyId: string,
+    input: { email: string; added_by: string },
+  ): Promise<{ ok: true; user_id: string }> {
+    return request(`/properties/${propertyId}/members`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  removeMember(propertyId: string, userId: string): Promise<{ ok: true }> {
+    return request(`/properties/${propertyId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  },
+
+  // users
+  listUsers(): Promise<UserRow[]> {
+    return request("/users");
+  },
+  deleteUser(id: string): Promise<{ ok: true }> {
+    return request(`/users/${id}`, { method: "DELETE" });
+  },
+  generateResetLink(
+    userId: string,
+    issuedBy: string,
+  ): Promise<ResetLinkResult> {
+    return request(`/users/${userId}/reset-link`, {
+      method: "POST",
+      body: JSON.stringify({ issued_by: issuedBy }),
+    });
+  },
+
+  // diagnostics
+  stats(): Promise<AdminStats> {
+    return request("/stats");
+  },
+};
