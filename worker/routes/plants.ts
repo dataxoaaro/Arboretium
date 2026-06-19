@@ -125,6 +125,13 @@ plantRoutes.get("/", async (c) => {
         .all<PlantRow>();
       if (r.results) all.push(...r.results);
     }
+    // The single-query path below orders by common_name; sort the unioned
+    // chunks the same way so pagination over the bind-param cap is consistent.
+    all.sort((a, b) =>
+      a.common_name.localeCompare(b.common_name, undefined, {
+        sensitivity: "base",
+      }),
+    );
     return c.json(all);
   }
 
