@@ -22,7 +22,9 @@ export default defineConfig({
       ],
       exclude: [
         // Deliberate no-unit-test zone: MapLibre/WebGL + canvas resize (ADR-0001).
-        "src/components/map/**",
+        // visibility-mode.ts is pure logic and stays covered.
+        "src/components/map/MapView.tsx",
+        "src/components/map/BasemapToggle.tsx",
         "src/admin/AdminMap.tsx",
         "src/lib/photos.ts",
         // Entry points / types / generated.
