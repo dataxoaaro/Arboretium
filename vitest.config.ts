@@ -7,7 +7,10 @@ export default defineConfig({
   test: {
     projects: ["./vitest.workers.config.ts", "./vitest.client.config.ts"],
     coverage: {
-      provider: "v8",
+      // istanbul (transform-time instrumentation) rather than v8: the v8
+      // provider needs node:inspector, which workerd does not expose, so it
+      // reports 0% statements/lines for the worker pool.
+      provider: "istanbul",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "./coverage",
       include: [
