@@ -4,6 +4,7 @@ import { mapRoutes } from "./routes/map";
 import { adminRoutes } from "./routes/admin";
 import { propertyRoutes } from "./routes/properties";
 import { plantRoutes } from "./routes/plants";
+import { cellRoutes } from "./routes/cells";
 import { photoRoutes } from "./routes/photos";
 import { originCheck } from "./lib/origin-check";
 
@@ -48,6 +49,7 @@ app.route("/map", mapRoutes);
 app.route("/admin", adminRoutes);
 app.route("/properties", propertyRoutes);
 app.route("/plants", plantRoutes);
+app.route("/cells", cellRoutes);
 app.route("/photos", photoRoutes);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

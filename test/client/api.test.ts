@@ -199,3 +199,23 @@ describe("photo endpoints", () => {
     expect(api.photoUrl("abc")).toBe("/api/photos/abc");
   });
 });
+
+describe("cell endpoints", () => {
+  it("listCells / getCell encode params", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(jsonOk([])));
+    await api.listCells("p/1");
+    expect(lastCall()[0]).toBe("/api/cells?property_id=p%2F1");
+    fetchMock.mockImplementation(() => Promise.resolve(jsonOk({})));
+    await api.getCell("p1", "cell-a");
+    expect(lastCall()[0]).toBe("/api/cells/p1/cell-a");
+  });
+
+  it("setCellNotes PUTs the notes body", async () => {
+    fetchMock.mockResolvedValue(jsonOk({ notes: "rocky" }));
+    await api.setCellNotes("p1", "cell-a", "rocky");
+    const [url, init] = lastCall();
+    expect(url).toBe("/api/cells/p1/cell-a");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ notes: "rocky" });
+  });
+});

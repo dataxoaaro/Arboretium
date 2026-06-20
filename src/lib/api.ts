@@ -69,6 +69,22 @@ export interface Photo {
   uploaded_by: string;
 }
 
+/** A hex cell that carries notes and/or photos (map overlay summary). */
+export interface CellSummary {
+  h3_res15: string;
+  notes: string | null;
+  photo_count: number;
+}
+
+/** Full cell detail: notes + the plants and cell photos anchored to the hex. */
+export interface CellDetail {
+  property_id: string;
+  h3_res15: string;
+  notes: string | null;
+  plants: Plant[];
+  photos: Photo[];
+}
+
 export interface ApiError {
   error: string;
 }
@@ -184,6 +200,32 @@ export const api = {
 
   listPhotosForPlant(plantId: string): Promise<Photo[]> {
     return request(`/photos?plant_id=${encodeURIComponent(plantId)}`);
+  },
+
+  // --- cells (hex notes + cell detail) ---
+
+  /** Annotated cells (notes/photos) in a property, for the map overlay. */
+  listCells(propertyId: string): Promise<CellSummary[]> {
+    return request(`/cells?property_id=${encodeURIComponent(propertyId)}`);
+  },
+
+  /** Full detail for one hex: notes + plants + cell photos. */
+  getCell(propertyId: string, h3: string): Promise<CellDetail> {
+    return request(
+      `/cells/${encodeURIComponent(propertyId)}/${encodeURIComponent(h3)}`,
+    );
+  },
+
+  /** Upsert a hex's notes (create-on-write). Empty string clears them. */
+  setCellNotes(
+    propertyId: string,
+    h3: string,
+    notes: string,
+  ): Promise<{ property_id: string; h3_res15: string; notes: string | null }> {
+    return request(
+      `/cells/${encodeURIComponent(propertyId)}/${encodeURIComponent(h3)}`,
+      { method: "PUT", body: JSON.stringify({ notes }) },
+    );
   },
 
   /** Upload bytes via multipart. Server reads `file` + metadata fields. */
