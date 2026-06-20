@@ -23,7 +23,7 @@ run_worker_first = true
 [[d1_databases]]
 binding = "DB"
 database_name = "arboritium"
-database_id = "00000000-0000-0000-0000-000000000000" # REPLACE with real D1 id
+database_id = "e31476d5-c01e-4675-81b3-b3db5324971b"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -32,7 +32,7 @@ bucket_name = "arboritium-photos" # create this R2 bucket
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "0000000000000000000000000000000000" # REPLACE with real KV namespace id
+id = "403b184269b742858a14bfc6cd1e20ba"
 
 # Non-secret config. ALLOWED_ORIGIN only matters for cross-origin callers (the
 # Vite dev proxy); in production the SPA and API share one origin, which the
