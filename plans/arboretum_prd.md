@@ -460,7 +460,7 @@ Everything lives on **Cloudflare's free tier** — there is no platform-pause to
 - **Cloudflare Workers** (free) — hosts the API
   - 100k requests/day, 10ms CPU per request — far above what a personal app needs
   - Deployed via `wrangler deploy` (or via a simple GitHub Action)
-- **Cloudflare D1** (free) — 5 GB SQLite database, ample for a personal arboretum
+- **Cloudflare D1** (free) — SQLite; 5 GB account storage, **500 MB per database** on the free plan (10 GB on paid), ample for relational data. Photos stay in R2, never in D1 (see ADR-0002).
 - **Cloudflare R2** (free up to 10 GB) — photo storage with **free egress**; resized photos at 2048 px ~300–500 KB each fit ~20–30k photos
 - **Cloudflare KV** (free) — small namespace for rate-limit counters; ~1k writes/day free is plenty for ~5 users
 - **Domain**: deployed to a long random `*.pages.dev` subdomain (e.g., `arboretum-x9a2b3c4d5.pages.dev`) for URL-obfuscation; the subdomain is shared only with family members alongside the site password. Optional custom domain (~€10/year) if a friendlier URL is wanted; Cloudflare DNS is free
@@ -684,6 +684,7 @@ Resolved during PRD review:
 - **Admin model** — property and user/member management is admin-only, implemented as SPA `/admin/*` pages calling Worker endpoints gated by `LOCAL_ADMIN`; those endpoints 404 in production. (Superseded the original standalone-tool-via-Cloudflare-HTTP-API design.) See §8.9.
 - **Rate limiting** — KV-backed per-email and per-IP limits on login and registration. See §8.7.
 - **Photo serving** — private R2 bucket, served through an auth-checked Worker endpoint. See §8.7, §9.
+- **Photo storage** — photos live in R2, **not** as base64/BLOB in D1: the free D1 database caps at 500 MB (vs R2's 10 GB free + free egress), and base64 adds a ~33% size tax. See ADR-0002 and `claudedocs/infra-cost-review.md`.
 - **JWT revocation** — explicitly out of scope for v1; acceptable for a hobby app. Sessions expire after 30 days; password change does not invalidate older sessions. See §9.
 - **URL obfuscation** — deployed to a long random `*.pages.dev` subdomain as a defense-in-depth measure (not a primary control). See §8.8.
 
