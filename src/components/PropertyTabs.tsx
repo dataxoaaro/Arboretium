@@ -6,7 +6,7 @@ export function PropertyTabs() {
   const { propertyId } = useParams<{ propertyId: string }>();
   if (!propertyId) return null;
   return (
-    <nav className="flex gap-1 border-b border-black/10 px-2 py-1 text-sm">
+    <nav className="flex border-b border-[var(--color-border)] bg-[var(--color-surface)] px-2">
       <Tab to={`/properties/${propertyId}`} end>
         Map
       </Tab>
@@ -29,10 +29,10 @@ function Tab({
       to={to}
       end={end}
       className={({ isActive }) =>
-        `px-3 py-1.5 rounded-md ${
+        `min-h-12 px-5 inline-flex items-center text-base border-b-2 -mb-px transition-colors ${
           isActive
-            ? "bg-black/10 font-medium text-fg"
-            : "text-fg/70 hover:bg-black/5 hover:text-fg"
+            ? "border-[var(--color-accent)] font-semibold text-fg"
+            : "border-transparent text-muted hover:text-fg"
         }`
       }
     >

@@ -30,7 +30,9 @@ export function Login() {
 
   return (
     <section className="max-w-sm">
-      <h1 className="text-2xl font-semibold mb-4">Login</h1>
+      <h1 className="text-3xl font-semibold mb-4 font-[family-name:var(--font-display)]">
+        Login
+      </h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block">
           <span className="text-sm text-fg/70">Email</span>
@@ -40,7 +42,7 @@ export function Login() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         <label className="block">
@@ -51,7 +53,7 @@ export function Login() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         {error && <p className="text-sm text-red-700">{error}</p>}

@@ -38,7 +38,9 @@ export function Register() {
 
   return (
     <section className="max-w-sm">
-      <h1 className="text-2xl font-semibold mb-1">Register</h1>
+      <h1 className="text-3xl font-semibold mb-1 font-[family-name:var(--font-display)]">
+        Register
+      </h1>
       <p className="text-sm text-fg/70 mb-4">
         Ask the admin for the site password if you don't have it.
       </p>
@@ -51,7 +53,7 @@ export function Register() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         <label className="block">
@@ -61,7 +63,7 @@ export function Register() {
             required
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         <label className="block">
@@ -73,7 +75,7 @@ export function Register() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         <label className="block">
@@ -83,7 +85,7 @@ export function Register() {
             required
             value={sitePassword}
             onChange={(e) => setSitePassword(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         {error && <p className="text-sm text-red-700">{error}</p>}

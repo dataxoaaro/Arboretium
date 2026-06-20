@@ -55,7 +55,7 @@ export function ResetPassword() {
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="mt-1 w-full rounded border border-black/15 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
         {error && <p className="text-sm text-red-700">{error}</p>}

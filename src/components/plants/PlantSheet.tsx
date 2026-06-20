@@ -15,6 +15,7 @@ import {
   type PlantInput,
 } from "../../lib/api";
 import { preparePhoto } from "../../lib/photos";
+import { Button } from "../ui/Button";
 
 export type PlantSheetMode =
   | {
@@ -58,13 +59,13 @@ export function PlantSheet({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 z-40"
+        className="fixed inset-0 bg-black/40 z-40"
         aria-hidden="true"
       />
       <aside
         role="dialog"
         aria-modal="true"
-        className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-bg z-50 shadow-xl border-l border-black/10 flex flex-col"
+        className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[var(--color-bg)] z-50 shadow-2xl border-l border-[var(--color-border)] flex flex-col"
       >
         {mode.kind === "info" && (
           <PlantInfo
@@ -163,22 +164,13 @@ function PlantInfo({
         {tab === "timeline" && <PhotoTimeline plant={plant} />}
       </div>
       <SheetFooter>
-        <button
-          type="button"
-          onClick={() => void del()}
-          disabled={busy}
-          className="px-3 py-2 rounded-md text-red-700 hover:bg-red-50 text-sm disabled:opacity-50"
-        >
+        <Button variant="danger" onClick={() => void del()} disabled={busy}>
           Delete
-        </button>
+        </Button>
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={onEdit}
-          className="px-3 py-2 rounded-md bg-fg text-bg text-sm hover:opacity-90"
-        >
+        <Button variant="primary" size="lg" onClick={onEdit}>
           Edit
-        </button>
+        </Button>
       </SheetFooter>
     </>
   );
@@ -197,10 +189,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 border-b-2 transition-colors ${
+      className={`min-h-12 px-5 text-base border-b-2 transition-colors ${
         active
-          ? "border-fg font-medium text-fg"
-          : "border-transparent text-fg/60 hover:text-fg"
+          ? "border-[var(--color-accent)] font-semibold text-fg"
+          : "border-transparent text-muted hover:text-fg"
       }`}
     >
       {children}
@@ -283,7 +275,7 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
   return (
     <div className="space-y-3 text-sm">
       <div className="flex items-center gap-2">
-        <label className="px-3 py-2 rounded-md bg-black/5 hover:bg-black/10 text-xs cursor-pointer">
+        <label className="min-h-12 px-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] inline-flex items-center font-medium cursor-pointer">
           {uploading ? "Uploading…" : "Add photo"}
           <input
             type="file"
@@ -506,21 +498,13 @@ function PlantForm({
           </FormField>
         </div>
         <SheetFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-2 rounded-md hover:bg-black/5 text-sm"
-          >
+          <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
           <div className="flex-1" />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-3 py-2 rounded-md bg-fg text-bg text-sm hover:opacity-90 disabled:opacity-50"
-          >
+          <Button type="submit" size="lg" disabled={submitting}>
             {submitting ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </SheetFooter>
       </form>
     </>
@@ -528,7 +512,7 @@ function PlantForm({
 }
 
 const inputClass =
-  "w-full border border-black/15 rounded-md px-2 py-1.5 text-sm";
+  "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3";
 
 function SheetHeader({
   title,
@@ -538,12 +522,14 @@ function SheetHeader({
   onClose: () => void;
 }) {
   return (
-    <header className="flex items-center justify-between border-b border-black/10 px-4 py-3">
-      <h2 className="font-semibold text-base truncate">{title}</h2>
+    <header className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+      <h2 className="text-xl font-semibold truncate font-[family-name:var(--font-display)]">
+        {title}
+      </h2>
       <button
         type="button"
         onClick={onClose}
-        className="text-fg/60 hover:text-fg text-sm"
+        className="min-h-12 min-w-12 -mr-2 rounded-full text-2xl text-muted hover:bg-black/5 inline-flex items-center justify-center"
         aria-label="Close"
       >
         ✕
@@ -554,7 +540,7 @@ function SheetHeader({
 
 function SheetFooter({ children }: { children: React.ReactNode }) {
   return (
-    <footer className="border-t border-black/10 p-3 flex items-center gap-2">
+    <footer className="border-t border-[var(--color-border)] p-4 flex items-center gap-3 pb-safe">
       {children}
     </footer>
   );

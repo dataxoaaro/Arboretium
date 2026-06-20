@@ -15,6 +15,7 @@ import { AdminUsers } from "./admin/AdminUsers";
 import { AdminBackups } from "./admin/AdminBackups";
 import { AuthGuard } from "./components/AuthGuard";
 import { PropertySwitcher } from "./components/PropertySwitcher";
+import { HeaderMenu } from "./components/HeaderMenu";
 import { useAuth } from "./lib/use-auth";
 
 export function App() {
@@ -22,25 +23,13 @@ export function App() {
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-black/10 px-4 py-3 flex items-center gap-4">
-        <Link to="/" className="font-semibold">
+      <header className="h-14 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 flex items-center gap-3">
+        <Link
+          to={user ? "/properties" : "/"}
+          className="text-xl font-semibold text-[var(--color-accent)] font-[family-name:var(--font-display)] shrink-0"
+        >
           Arboretum
         </Link>
-        <nav className="flex gap-3 text-sm flex-1">
-          {user && (
-            <>
-              <Link to="/properties" className="text-fg/70 hover:text-fg">
-                Properties
-              </Link>
-              <Link to="/admin" className="text-fg/70 hover:text-fg">
-                Admin
-              </Link>
-              <Link to="/settings" className="text-fg/70 hover:text-fg">
-                Settings
-              </Link>
-            </>
-          )}
-        </nav>
         {!loading && user && (
           <Routes>
             <Route
@@ -50,31 +39,26 @@ export function App() {
             <Route path="*" element={null} />
           </Routes>
         )}
-        {!loading && (
-          <div className="text-sm text-fg/70">
-            {user ? (
-              <span className="flex items-center gap-3">
-                <span>{user.display_name}</span>
-                <button
-                  type="button"
-                  onClick={() => void logout()}
-                  className="underline"
-                >
-                  Sign out
-                </button>
-              </span>
-            ) : (
-              <span className="flex gap-3">
-                <Link to="/login" className="hover:text-fg">
-                  Sign in
-                </Link>
-                <Link to="/register" className="hover:text-fg">
-                  Register
-                </Link>
-              </span>
-            )}
-          </div>
-        )}
+        <div className="flex-1" />
+        {!loading &&
+          (user ? (
+            <HeaderMenu user={user} logout={() => void logout()} />
+          ) : (
+            <nav className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="min-h-11 px-3 inline-flex items-center rounded-xl hover:bg-black/5"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/register"
+                className="min-h-11 px-4 inline-flex items-center rounded-xl bg-[var(--color-accent)] text-white font-medium"
+              >
+                Register
+              </Link>
+            </nav>
+          ))}
       </header>
       <Routes>
         {/* Admin routes get the rail layout (no main padding). */}

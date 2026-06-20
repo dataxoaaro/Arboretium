@@ -28,7 +28,9 @@ export function Properties() {
 
   return (
     <section className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Pick a property</h1>
+      <h1 className="text-3xl font-semibold mb-4 font-[family-name:var(--font-display)]">
+        Pick a property
+      </h1>
 
       {error && (
         <div className="mb-4 border border-red-200 bg-red-50 text-red-800 rounded-md px-3 py-2 text-sm">
@@ -39,7 +41,7 @@ export function Properties() {
       {properties === null && <p className="text-sm text-fg/60">Loading…</p>}
 
       {properties && properties.length === 0 && (
-        <div className="border border-dashed border-black/15 rounded-md p-6 text-sm text-fg/70">
+        <div className="border border-dashed border-[var(--color-border)] rounded-2xl p-6 text-muted">
           <p className="font-medium text-fg mb-1">
             You're not a member of any property yet.
           </p>
@@ -59,10 +61,10 @@ export function Properties() {
             <li key={p.id}>
               <Link
                 to={`/properties/${p.id}`}
-                className="block border border-black/15 hover:border-black/30 rounded-md p-4 transition-colors"
+                className="block border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] rounded-2xl p-5 transition-colors"
               >
-                <div className="font-medium">{p.name}</div>
-                <div className="text-xs text-fg/60 mt-1">
+                <div className="text-lg font-medium">{p.name}</div>
+                <div className="text-sm text-muted mt-1">
                   {hexCount(p.included_hexes)} hexes ·{" "}
                   {p.center_lat != null && p.center_lng != null
                     ? `${p.center_lat.toFixed(3)}, ${p.center_lng.toFixed(3)}`
