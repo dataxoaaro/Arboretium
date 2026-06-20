@@ -10,10 +10,10 @@ Vitest + React Testing Library + jsdom.
 
 ## Scope
 
-- **Behavioral, not load.** Tests assert correctness (happy path + auth failure
-  - bad input). This is a <10-user hobby app, so the rate limiter gets a single
-    small-N behavioral test (N failures → blocked → window resets), not a load
-    harness.
+- **Behavioral, not load.** Tests assert correctness across the happy path, auth
+  failures, and bad input. This is a <10-user hobby app, so the rate limiter
+  gets a single small-N behavioral test (N failures → blocked → window resets),
+  not a load harness.
 - **80% target is split pragmatically.** Full coverage on the worker, the
   pure-logic libs (h3 helpers, api client, EXIF/`taken_at` parsing), and
   form/flow components (login, plant sheet, list + search).
