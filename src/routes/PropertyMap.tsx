@@ -20,6 +20,7 @@ import {
 import { CellSheet } from "../components/cells/CellSheet";
 import { PropertyTabs } from "../components/PropertyTabs";
 import { cellAtPoint, cellCenter } from "../lib/h3";
+import { cachedRead } from "../lib/cached-read";
 
 type SheetState =
   | { kind: "none" }
@@ -39,7 +40,10 @@ export function PropertyMap() {
   const reloadPlants = useCallback(async () => {
     try {
       setError(null);
-      setPlants(await api.listPlants(property.id));
+      const r = await cachedRead(`plants:${property.id}`, () =>
+        api.listPlants(property.id),
+      );
+      setPlants(r.data);
     } catch (err) {
       setError(
         err instanceof ApiCallError ? err.message : "Failed to load plants",
@@ -49,7 +53,10 @@ export function PropertyMap() {
 
   const reloadCells = useCallback(async () => {
     try {
-      setCells(await api.listCells(property.id));
+      const r = await cachedRead(`cells:${property.id}`, () =>
+        api.listCells(property.id),
+      );
+      setCells(r.data);
     } catch {
       // The annotated overlay is non-critical; ignore load errors.
     }

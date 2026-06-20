@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiCallError, type Property } from "../lib/api";
+import { cachedRead } from "../lib/cached-read";
 
 export function Properties() {
   const [properties, setProperties] = useState<Property[] | null>(null);
@@ -12,10 +13,9 @@ export function Properties() {
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .listProperties()
-      .then((rows) => {
-        if (!cancelled) setProperties(rows);
+    cachedRead("properties", () => api.listProperties())
+      .then((r) => {
+        if (!cancelled) setProperties(r.data);
       })
       .catch((err: unknown) => {
         if (cancelled) return;

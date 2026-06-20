@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Arboretum">
+  <rect width="512" height="512" rx="104" fill="#f6f5ee"/>
+  <!-- leaf -->
+  <path d="M256 84c104 56 140 224 0 344C116 308 152 140 256 84Z" fill="#3f7d44"/>
+  <!-- midrib + veins -->
+  <path d="M256 120v288" stroke="#f6f5ee" stroke-width="14" stroke-linecap="round"/>
+  <path d="M256 196c-26 14-44 22-70 24M256 196c26 14 44 22 70 24M256 268c-26 14-44 22-70 24M256 268c26 14 44 22 70 24"
+        stroke="#f6f5ee" stroke-width="10" stroke-linecap="round" fill="none"/>
+</svg>

@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useParams, Navigate } from "react-router-dom";
 import { api, ApiCallError, type Property } from "../lib/api";
+import { cachedRead } from "../lib/cached-read";
 import { CurrentPropertyContext } from "../lib/property-context";
 
 export function PropertyLayout() {
@@ -21,10 +22,9 @@ export function PropertyLayout() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    api
-      .getProperty(propertyId)
-      .then((p) => {
-        if (!cancelled) setProperty(p);
+    cachedRead(`property:${propertyId}`, () => api.getProperty(propertyId))
+      .then((r) => {
+        if (!cancelled) setProperty(r.data);
       })
       .catch((err: unknown) => {
         if (cancelled) return;

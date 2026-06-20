@@ -16,6 +16,7 @@ import { AdminBackups } from "./admin/AdminBackups";
 import { AuthGuard } from "./components/AuthGuard";
 import { PropertySwitcher } from "./components/PropertySwitcher";
 import { HeaderMenu } from "./components/HeaderMenu";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { useAuth } from "./lib/use-auth";
 
 export function App() {
@@ -23,6 +24,7 @@ export function App() {
 
   return (
     <div className="min-h-full">
+      <OfflineBanner />
       <header className="h-14 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 flex items-center gap-3">
         <Link
           to={user ? "/properties" : "/"}

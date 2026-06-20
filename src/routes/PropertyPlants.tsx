@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiCallError, type Plant } from "../lib/api";
+import { cachedRead } from "../lib/cached-read";
 import { useCurrentProperty } from "../lib/property-context";
 import { PropertyTabs } from "../components/PropertyTabs";
 
@@ -22,10 +23,9 @@ export function PropertyPlants() {
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .listPlants(property.id)
-      .then((rows) => {
-        if (!cancelled) setPlants(rows);
+    cachedRead(`plants:${property.id}`, () => api.listPlants(property.id))
+      .then((r) => {
+        if (!cancelled) setPlants(r.data);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
