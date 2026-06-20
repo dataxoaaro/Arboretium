@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { PropertyTabs } from "../../src/components/PropertyTabs";
+import { t } from "../../src/lib/strings";
 
 describe("PropertyTabs", () => {
   it("renders Map and Plants tabs with the right hrefs", () => {
@@ -12,11 +13,11 @@ describe("PropertyTabs", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("link", { name: "Map" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: t.tabMap })).toHaveAttribute(
       "href",
       "/properties/p1",
     );
-    expect(screen.getByRole("link", { name: "Plants" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: t.tabPlants })).toHaveAttribute(
       "href",
       "/properties/p1/plants",
     );

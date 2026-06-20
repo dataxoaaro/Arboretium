@@ -3,8 +3,9 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { adminApi, AdminApiError } from "./admin-api";
+import { adminApi } from "./admin-api";
 import type { PropertyRow } from "./admin-types";
+import { t } from "../lib/strings";
 
 export function AdminProperties() {
   const [rows, setRows] = useState<PropertyRow[] | null>(null);
@@ -16,12 +17,8 @@ export function AdminProperties() {
       setError(null);
       const data = await adminApi.listProperties();
       setRows(data);
-    } catch (err) {
-      setError(
-        err instanceof AdminApiError
-          ? err.message
-          : "Failed to load properties",
-      );
+    } catch {
+      setError(t.adminLoadPropertiesFailed);
     }
   }
 
@@ -30,18 +27,13 @@ export function AdminProperties() {
   }, []);
 
   async function archive(p: PropertyRow) {
-    if (
-      !confirm(
-        `Archive "${p.name}"? Members keep access until you remove them.`,
-      )
-    )
-      return;
+    if (!confirm(t.adminArchiveConfirm(p.name))) return;
     setBusyId(p.id);
     try {
       await adminApi.archiveProperty(p.id);
       await load();
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Archive failed");
+    } catch {
+      setError(t.adminArchiveFailed);
     } finally {
       setBusyId(null);
     }
@@ -52,8 +44,8 @@ export function AdminProperties() {
     try {
       await adminApi.restoreProperty(p.id);
       await load();
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Restore failed");
+    } catch {
+      setError(t.adminRestoreFailed);
     } finally {
       setBusyId(null);
     }
@@ -65,21 +57,21 @@ export function AdminProperties() {
   return (
     <div className="p-6 max-w-5xl">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Properties</h1>
+        <h1 className="text-xl font-semibold">{t.adminNavProperties}</h1>
         <Link
           to="/admin/properties/new"
           className="rounded-md bg-fg text-bg px-3 py-2 text-sm font-medium hover:opacity-90"
         >
-          New property
+          {t.adminNewProperty}
         </Link>
       </div>
       {error && <Banner kind="error">{error}</Banner>}
-      {!rows && <p className="text-sm text-fg/60">Loading…</p>}
+      {!rows && <p className="text-sm text-fg/60">{t.loading}</p>}
       {rows && (
         <>
-          <Section title={`Active (${active.length})`}>
+          <Section title={t.adminActive(active.length)}>
             {active.length === 0 ? (
-              <Empty text="No active properties yet. Create one to get started." />
+              <Empty text={t.adminNoActive} />
             ) : (
               <Table
                 rows={active}
@@ -90,7 +82,7 @@ export function AdminProperties() {
                       to={`/admin/properties/${p.id}/edit`}
                       className="text-fg/80 hover:text-fg underline"
                     >
-                      Edit
+                      {t.adminEdit}
                     </Link>
                     <button
                       type="button"
@@ -98,16 +90,16 @@ export function AdminProperties() {
                       onClick={() => void archive(p)}
                       className="text-red-700 hover:text-red-900 underline disabled:opacity-50"
                     >
-                      Archive
+                      {t.adminArchiveAction}
                     </button>
                   </>
                 )}
               />
             )}
           </Section>
-          <Section title={`Archived (${archived.length})`}>
+          <Section title={t.adminArchived(archived.length)}>
             {archived.length === 0 ? (
-              <Empty text="No archived properties." />
+              <Empty text={t.adminNoArchived} />
             ) : (
               <Table
                 rows={archived}
@@ -119,7 +111,7 @@ export function AdminProperties() {
                     onClick={() => void restore(p)}
                     className="text-emerald-700 hover:text-emerald-900 underline disabled:opacity-50"
                   >
-                    Restore
+                    {t.adminRestoreAction}
                   </button>
                 )}
               />
@@ -160,11 +152,11 @@ function Table({
       <table className="w-full text-sm">
         <thead className="bg-black/[0.03] text-left text-xs uppercase text-fg/60">
           <tr>
-            <th className="px-3 py-2">Name</th>
-            <th className="px-3 py-2">Hexes</th>
-            <th className="px-3 py-2">Centre</th>
-            <th className="px-3 py-2">Updated</th>
-            <th className="px-3 py-2 text-right">Actions</th>
+            <th className="px-3 py-2">{t.adminColName}</th>
+            <th className="px-3 py-2">{t.adminColHexes}</th>
+            <th className="px-3 py-2">{t.adminColCentre}</th>
+            <th className="px-3 py-2">{t.adminColUpdated}</th>
+            <th className="px-3 py-2 text-right">{t.adminColActions}</th>
           </tr>
         </thead>
         <tbody>

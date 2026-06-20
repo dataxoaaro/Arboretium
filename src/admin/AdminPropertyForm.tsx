@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { adminApi, AdminApiError } from "./admin-api";
 import type { PropertyMember, PropertyRow, UserRow } from "./admin-types";
 import { AdminMap, type BoundaryShape } from "./AdminMap";
+import { t } from "../lib/strings";
 
 interface AdminPropertyFormProps {
   mode: "create" | "edit";
@@ -62,8 +63,8 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
           setOwnerId(list[0].id);
         }
         setLoaded(true);
-      } catch (err) {
-        setError(err instanceof AdminApiError ? err.message : "Failed to load");
+      } catch {
+        setError(t.failedToLoad);
         setLoaded(true);
       }
     }
@@ -80,19 +81,19 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
   async function save() {
     setError(null);
     if (!name.trim()) {
-      setError("Name is required");
+      setError(t.adminNameRequired);
       return;
     }
     if (mode === "create" && !ownerId) {
-      setError("Pick an owner");
+      setError(t.adminPickOwner);
       return;
     }
     if (!shape.polygon) {
-      setError("Draw the property boundary first");
+      setError(t.adminDrawBoundary);
       return;
     }
     if (shape.includedHexes.length === 0) {
-      setError("Include at least one hex");
+      setError(t.adminIncludeHex);
       return;
     }
     setSaving(true);
@@ -118,22 +119,24 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
         });
         navigate("/admin/properties");
       }
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Save failed");
+    } catch {
+      setError(t.adminFormSaveFailed);
     } finally {
       setSaving(false);
     }
   }
 
   if (!loaded) {
-    return <div className="p-6 text-sm text-fg/60">Loading…</div>;
+    return <div className="p-6 text-sm text-fg/60">{t.loading}</div>;
   }
 
   return (
     <div className="p-6 max-w-6xl">
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">
-          {mode === "create" ? "New property" : `Edit · ${property?.name}`}
+          {mode === "create"
+            ? t.adminNewProperty
+            : t.adminFormEditTitle(property?.name)}
         </h1>
         <div className="flex gap-2 text-sm">
           <button
@@ -141,7 +144,7 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
             onClick={() => navigate("/admin/properties")}
             className="px-3 py-2 rounded-md bg-black/5 hover:bg-black/10"
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -149,7 +152,7 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
             onClick={() => void save()}
             className="px-3 py-2 rounded-md bg-fg text-bg hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? t.saving : t.save}
           </button>
         </div>
       </header>
@@ -162,19 +165,17 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
         <div className="space-y-3">
-          <Field label="Name">
+          <Field label={t.adminFieldName}>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full border border-black/15 rounded-md px-2 py-1.5 text-sm"
-              placeholder="e.g. Tampere garden"
+              placeholder={t.adminNamePlaceholder}
             />
           </Field>
-          <Field label="Owner">
+          <Field label={t.adminFieldOwner}>
             {users.length === 0 ? (
-              <p className="text-xs text-red-700">
-                No users registered yet. Register one in the SPA first.
-              </p>
+              <p className="text-xs text-red-700">{t.adminNoUsersRegistered}</p>
             ) : (
               <select
                 value={ownerId}
@@ -191,17 +192,17 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
           </Field>
           <div className="border border-black/10 rounded-md p-3 text-xs text-fg/70 space-y-1">
             <p>
-              <strong>Boundary:</strong>{" "}
-              {shape.polygon ? "drawn" : "not yet drawn"}
+              <strong>{t.adminBoundaryLabel}</strong>{" "}
+              {shape.polygon ? t.adminBoundaryDrawn : t.adminBoundaryNotDrawn}
             </p>
             <p>
-              <strong>Hexes:</strong>{" "}
-              {shape.includedHexes.length.toLocaleString()} · res 15
+              <strong>{t.adminHexesLabel}</strong>{" "}
+              {shape.includedHexes.length.toLocaleString()} · taso 15
             </p>
             {shape.center && (
               <p>
-                <strong>Centre:</strong> {shape.center.lat.toFixed(5)},{" "}
-                {shape.center.lng.toFixed(5)}
+                <strong>{t.adminCentreLabel}</strong>{" "}
+                {shape.center.lat.toFixed(5)}, {shape.center.lng.toFixed(5)}
               </p>
             )}
           </div>
@@ -295,10 +296,8 @@ function MembersPanel({
     try {
       setError(null);
       setMembers(await adminApi.listMembers(propertyId));
-    } catch (err) {
-      setError(
-        err instanceof AdminApiError ? err.message : "Failed to load members",
-      );
+    } catch {
+      setError(t.adminLoadMembersFailed);
     }
   }
 
@@ -318,21 +317,21 @@ function MembersPanel({
       });
       setEmail("");
       await load();
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Add failed");
+    } catch {
+      setError(t.adminAddMemberFailed);
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(userId: string, displayName: string) {
-    if (!confirm(`Remove ${displayName} from this property?`)) return;
+    if (!confirm(t.adminRemoveMemberConfirm(displayName))) return;
     setBusy(true);
     try {
       await adminApi.removeMember(propertyId, userId);
       await load();
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Remove failed");
+    } catch {
+      setError(t.adminRemoveMemberFailed);
     } finally {
       setBusy(false);
     }
@@ -340,7 +339,7 @@ function MembersPanel({
 
   return (
     <div className="border border-black/10 rounded-md p-3">
-      <h3 className="text-sm font-medium mb-2">Members</h3>
+      <h3 className="text-sm font-medium mb-2">{t.adminMembers}</h3>
       {error && <div className="mb-2 text-xs text-red-700">{error}</div>}
       <form onSubmit={add} className="flex gap-2 mb-3">
         <input
@@ -355,12 +354,12 @@ function MembersPanel({
           disabled={busy || !email.trim()}
           className="px-2 py-1.5 rounded-md bg-fg text-bg text-xs hover:opacity-90 disabled:opacity-50"
         >
-          Add
+          {t.adminAdd}
         </button>
       </form>
-      {members === null && <p className="text-xs text-fg/60">Loading…</p>}
+      {members === null && <p className="text-xs text-fg/60">{t.loading}</p>}
       {members && members.length === 0 && (
-        <p className="text-xs text-fg/60">No members yet.</p>
+        <p className="text-xs text-fg/60">{t.adminNoMembers}</p>
       )}
       {members && members.length > 0 && (
         <ul className="space-y-1">
@@ -374,7 +373,9 @@ function MembersPanel({
                 <div className="text-fg/60 truncate">{m.email}</div>
               </div>
               {m.id === ownerId ? (
-                <span className="text-[10px] uppercase text-fg/50">owner</span>
+                <span className="text-[10px] uppercase text-fg/50">
+                  {t.adminOwnerBadge}
+                </span>
               ) : (
                 <button
                   type="button"
@@ -382,7 +383,7 @@ function MembersPanel({
                   onClick={() => void remove(m.id, m.display_name)}
                   className="text-red-700 hover:text-red-900 underline disabled:opacity-50"
                 >
-                  Remove
+                  {t.adminRemove}
                 </button>
               )}
             </li>

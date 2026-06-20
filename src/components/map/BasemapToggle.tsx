@@ -6,6 +6,7 @@
 // configured) shows a small amber hint pointing the user at the README.
 
 import type { BasemapLayer } from "@/lib/api-map";
+import { t } from "@/lib/strings";
 
 interface BasemapToggleProps {
   value: BasemapLayer;
@@ -16,19 +17,10 @@ interface BasemapToggleProps {
 const OPTIONS: ReadonlyArray<{
   id: BasemapLayer;
   label: string;
-  title: string;
 }> = [
-  { id: "street", label: "Street", title: "Topographic / street tiles" },
-  {
-    id: "satellite-mml",
-    label: "Sat (MML)",
-    title: "MML ortokuva — high-res Finland, capped at z=18 (~60 cm)",
-  },
-  {
-    id: "satellite-esri",
-    label: "Sat (Esri)",
-    title: "Esri World Imagery — global, can be sharper past z=18",
-  },
+  { id: "street", label: t.basemapStreet },
+  { id: "satellite-mml", label: t.basemapSatMml },
+  { id: "satellite-esri", label: t.basemapSatEsri },
 ];
 
 export function BasemapToggle({
@@ -43,16 +35,15 @@ export function BasemapToggle({
           key={b.id}
           type="button"
           onClick={() => onChange(b.id)}
-          title={b.title}
-          className={`px-3 py-2 ${
+          className={`min-h-11 px-4 ${
             b.id === value ? "bg-black/10 font-medium" : "hover:bg-black/5"
           }`}
         >
           {b.label}
           {b.id === "satellite-mml" && fellBack && (
             <span
-              aria-label="Falling back to Esri"
-              title="MML key not configured — falling back to Esri. See README."
+              aria-label={t.basemapFellBack}
+              title={t.basemapFellBack}
               className="ml-1 text-amber-600"
             >
               !

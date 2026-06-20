@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Login } from "../../src/routes/Login";
 import { AuthContext, type AuthState } from "../../src/lib/use-auth";
 import { api, ApiCallError } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -44,9 +45,9 @@ describe("Login", () => {
     vi.mocked(api.login).mockResolvedValue(user);
     const { setUser } = renderLogin();
 
-    await userEvent.type(screen.getByLabelText("Email"), "a@b.c");
-    await userEvent.type(screen.getByLabelText("Password"), "a-password");
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await userEvent.type(screen.getByLabelText(t.email), "a@b.c");
+    await userEvent.type(screen.getByLabelText(t.password), "a-password");
+    await userEvent.click(screen.getByRole("button", { name: t.loginSubmit }));
 
     await waitFor(() =>
       expect(screen.getByText("PROPERTIES PAGE")).toBeInTheDocument(),
@@ -64,12 +65,12 @@ describe("Login", () => {
     );
     renderLogin();
 
-    await userEvent.type(screen.getByLabelText("Email"), "a@b.c");
-    await userEvent.type(screen.getByLabelText("Password"), "wrong");
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await userEvent.type(screen.getByLabelText(t.email), "a@b.c");
+    await userEvent.type(screen.getByLabelText(t.password), "wrong");
+    await userEvent.click(screen.getByRole("button", { name: t.loginSubmit }));
 
     await waitFor(() =>
-      expect(screen.getByText("Invalid email or password")).toBeInTheDocument(),
+      expect(screen.getByText(t.loginFailed)).toBeInTheDocument(),
     );
     expect(screen.queryByText("PROPERTIES PAGE")).not.toBeInTheDocument();
   });

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { PropertySwitcher } from "../../src/components/PropertySwitcher";
 import { api, type Property } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 
 const navigateMock = vi.fn();
 
@@ -65,8 +66,6 @@ describe("PropertySwitcher", () => {
     vi.mocked(api.listProperties).mockResolvedValue([]);
     renderSwitcher();
     await userEvent.click(screen.getByRole("button"));
-    expect(
-      await screen.findByText("You have no other properties."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(t.switcherNone)).toBeInTheDocument();
   });
 });

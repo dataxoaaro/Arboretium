@@ -5,6 +5,7 @@ import { Settings } from "../../src/routes/Settings";
 import { AuthContext, type AuthState } from "../../src/lib/use-auth";
 import { api, ApiCallError } from "../../src/lib/api";
 import type { User } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -45,18 +46,18 @@ describe("Settings", () => {
     vi.mocked(api.changePassword).mockResolvedValue({ ok: true });
     renderSettings();
     await userEvent.type(
-      screen.getByLabelText("Current password"),
+      screen.getByLabelText(t.settingsCurrentPassword),
       "old-password",
     );
     await userEvent.type(
-      screen.getByLabelText("New password (≥10 chars)"),
+      screen.getByLabelText(t.settingsNewPassword),
       "new-password-xx",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Update password" }),
+      screen.getByRole("button", { name: t.settingsUpdate }),
     );
     await waitFor(() =>
-      expect(screen.getByText("Password updated.")).toBeInTheDocument(),
+      expect(screen.getByText(t.settingsUpdated)).toBeInTheDocument(),
     );
     expect(api.changePassword).toHaveBeenCalledWith({
       current_password: "old-password",
@@ -69,22 +70,23 @@ describe("Settings", () => {
       rejected(new ApiCallError("Current password incorrect", 401)),
     );
     renderSettings();
-    await userEvent.type(screen.getByLabelText("Current password"), "wrong");
     await userEvent.type(
-      screen.getByLabelText("New password (≥10 chars)"),
+      screen.getByLabelText(t.settingsCurrentPassword),
+      "wrong",
+    );
+    await userEvent.type(
+      screen.getByLabelText(t.settingsNewPassword),
       "new-password-xx",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Update password" }),
+      screen.getByRole("button", { name: t.settingsUpdate }),
     );
-    expect(
-      await screen.findByText("Current password incorrect"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(t.settingsChangeFailed)).toBeInTheDocument();
   });
 
   it("signs out", async () => {
     const { logout } = renderSettings();
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: t.signOut }));
     expect(logout).toHaveBeenCalled();
   });
 });

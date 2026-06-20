@@ -6,13 +6,7 @@
 // designed for one-handed phone use by older users.
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  api,
-  ApiCallError,
-  type CellDetail,
-  type Photo,
-  type Plant,
-} from "../../lib/api";
+import { api, type CellDetail, type Photo, type Plant } from "../../lib/api";
 import { preparePhoto } from "../../lib/photos";
 import {
   parentCell,
@@ -22,6 +16,7 @@ import {
   RES_WIDE,
 } from "../../lib/h3";
 import { Button } from "../ui/Button";
+import { t } from "../../lib/strings";
 
 interface CellSheetProps {
   open: boolean;
@@ -53,8 +48,8 @@ export function CellSheet({
     try {
       setError(null);
       setDetail(await api.getCell(propertyId, h3));
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Failed to load");
+    } catch {
+      setError(t.failedToLoad);
     }
   }, [propertyId, h3]);
 
@@ -86,17 +81,17 @@ export function CellSheet({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Spot details"
+        aria-label={t.cellTitle}
         className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[var(--color-bg)] z-50 shadow-2xl border-l border-[var(--color-border)] flex flex-col"
       >
         <header className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
           <h2 className="text-xl font-semibold font-[family-name:var(--font-display)]">
-            This spot
+            {t.cellTitle}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t.close}
             className="min-h-12 min-w-12 -mr-2 rounded-full text-2xl text-muted hover:bg-black/5 inline-flex items-center justify-center"
           >
             ✕
@@ -110,7 +105,7 @@ export function CellSheet({
             </div>
           )}
 
-          {!detail && !error && <p className="text-muted">Loading…</p>}
+          {!detail && !error && <p className="text-muted">{t.loading}</p>}
 
           {detail && (
             <>
@@ -173,9 +168,9 @@ function PlantsSection({
   onAddPlant: () => void;
 }) {
   return (
-    <Section title={`Plants here (${plants.length})`}>
+    <Section title={t.cellPlantsHere(plants.length)}>
       {plants.length === 0 ? (
-        <p className="text-muted">No plants in this spot yet.</p>
+        <p className="text-muted">{t.cellNoPlants}</p>
       ) : (
         <ul className="space-y-2">
           {plants.map((p) => (
@@ -205,7 +200,7 @@ function PlantsSection({
         </ul>
       )}
       <Button variant="primary" className="w-full" onClick={onAddPlant}>
-        + Add a plant here
+        {t.cellAddPlantHere}
       </Button>
     </Section>
   );
@@ -233,20 +228,20 @@ function NotesSection({
     try {
       await api.setCellNotes(propertyId, h3, draft);
       onSaved();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Save failed");
+    } catch {
+      setError(t.cellSaveNotesFailed);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Section title="Notes about this spot">
+    <Section title={t.cellNotesTitle}>
       <textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         rows={3}
-        placeholder="e.g. rocky soil, heavy shade, wet in spring…"
+        placeholder={t.cellNotesPlaceholder}
         className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 resize-y"
       />
       {error && <p className="text-[var(--color-danger)] text-sm">{error}</p>}
@@ -256,7 +251,7 @@ function NotesSection({
         disabled={!dirty || saving}
         onClick={() => void save()}
       >
-        {saving ? "Saving…" : "Save notes"}
+        {saving ? t.saving : t.cellSaveNotes}
       </Button>
     </Section>
   );
@@ -290,36 +285,36 @@ function PhotosSection({
         filename: file.name,
       });
       onChanged();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Upload failed");
+    } catch {
+      setError(t.photoUploadFailed);
     } finally {
       setUploading(false);
     }
   }
 
   async function recaption(photo: Photo) {
-    const next = prompt("Caption", photo.caption ?? "");
+    const next = prompt(t.photoCaptionPrompt, photo.caption ?? "");
     if (next === null) return;
     try {
       await api.updatePhoto(photo.id, next.trim() || null);
       onChanged();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Update failed");
+    } catch {
+      setError(t.photoCaptionFailed);
     }
   }
 
   async function remove(photo: Photo) {
-    if (!confirm("Delete this photo? This cannot be undone.")) return;
+    if (!confirm(t.photoDeleteConfirm)) return;
     try {
       await api.deletePhoto(photo.id);
       onChanged();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Delete failed");
+    } catch {
+      setError(t.photoDeleteFailed);
     }
   }
 
   return (
-    <Section title={`Photos of this spot (${photos.length})`}>
+    <Section title={t.cellPhotosTitle(photos.length)}>
       {error && <p className="text-[var(--color-danger)] text-sm">{error}</p>}
       {photos.length > 0 && (
         <ul className="space-y-3">
@@ -349,14 +344,14 @@ function PhotosSection({
                   onClick={() => void recaption(photo)}
                   className="min-h-10 px-2 underline text-muted hover:text-fg"
                 >
-                  Caption
+                  {t.photoCaption}
                 </button>
                 <button
                   type="button"
                   onClick={() => void remove(photo)}
                   className="min-h-10 px-2 underline text-[var(--color-danger)]"
                 >
-                  Delete
+                  {t.delete}
                 </button>
               </div>
             </li>
@@ -364,7 +359,7 @@ function PhotosSection({
         </ul>
       )}
       <label className="w-full min-h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] flex items-center justify-center font-medium cursor-pointer">
-        {uploading ? "Uploading…" : "+ Add a photo of this spot"}
+        {uploading ? t.photoUploading : t.cellAddPhotoHere}
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -400,16 +395,21 @@ function CellMeta({ h3 }: { h3: string }) {
   return (
     <details className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
       <summary className="cursor-pointer font-medium text-muted">
-        Cell details
+        {t.cellDetailsTitle}
       </summary>
       <dl className="mt-3 space-y-1 text-sm">
-        <Meta label="Cell (res 15)" value={h3} mono />
+        <Meta label={t.cellRes15} value={h3} mono />
         {parents.map((p) => (
-          <Meta key={p.res} label={`Parent res ${p.res}`} value={p.cell} mono />
+          <Meta
+            key={p.res}
+            label={t.cellParentRes(p.res)}
+            value={p.cell}
+            mono
+          />
         ))}
         {center && (
           <Meta
-            label="Centre"
+            label={t.cellCentre}
             value={`${center[1].toFixed(6)}, ${center[0].toFixed(6)}`}
           />
         )}

@@ -4,8 +4,9 @@
 // displays current DB stats and instructions.
 
 import { useEffect, useState } from "react";
-import { adminApi, AdminApiError } from "./admin-api";
+import { adminApi } from "./admin-api";
 import type { AdminStats } from "./admin-types";
+import { t } from "../lib/strings";
 
 export function AdminBackups() {
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -15,16 +16,12 @@ export function AdminBackups() {
     adminApi
       .stats()
       .then(setStats)
-      .catch((err: unknown) =>
-        setError(
-          err instanceof AdminApiError ? err.message : "Failed to load stats",
-        ),
-      );
+      .catch(() => setError(t.adminLoadStatsFailed));
   }, []);
 
   return (
     <div className="p-6 max-w-4xl">
-      <h1 className="text-xl font-semibold mb-4">Backups</h1>
+      <h1 className="text-xl font-semibold mb-4">{t.adminBackupsTitle}</h1>
 
       {error && (
         <div className="mb-4 border border-red-200 bg-red-50 text-red-800 rounded-md px-3 py-2 text-sm">
@@ -34,53 +31,55 @@ export function AdminBackups() {
 
       <section className="mb-6">
         <h2 className="text-sm font-medium text-fg/70 mb-2">
-          Current state (local D1)
+          {t.adminBackupsState}
         </h2>
-        {!stats && <p className="text-sm text-fg/60">Loading…</p>}
+        {!stats && <p className="text-sm text-fg/60">{t.loading}</p>}
         {stats && (
           <dl className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <Stat label="Users" value={stats.users} />
-            <Stat label="Properties (active)" value={stats.properties_active} />
+            <Stat label={t.adminStatUsers} value={stats.users} />
+            <Stat label={t.adminStatActive} value={stats.properties_active} />
             <Stat
-              label="Properties (archived)"
+              label={t.adminStatArchived}
               value={stats.properties_archived}
             />
-            <Stat label="Plants" value={stats.plants} />
-            <Stat label="Photos" value={stats.photos} />
+            <Stat label={t.adminStatPlants} value={stats.plants} />
+            <Stat label={t.adminStatPhotos} value={stats.photos} />
           </dl>
         )}
       </section>
 
       <section>
-        <h2 className="text-sm font-medium text-fg/70 mb-2">Run a backup</h2>
+        <h2 className="text-sm font-medium text-fg/70 mb-2">
+          {t.adminBackupsRun}
+        </h2>
         <div className="border border-black/10 rounded-md p-4 bg-black/[0.02] text-sm space-y-3">
-          <p>From the project root:</p>
+          <p>Projektin juuresta:</p>
           <pre className="bg-fg text-bg rounded-md p-3 text-xs font-mono overflow-x-auto">
             {`pnpm admin:backup`}
           </pre>
           <p className="text-fg/70 text-xs">
-            Produces a timestamped folder under{" "}
-            <code className="font-mono">backups/</code> containing:
+            Luo aikaleimatun kansion <code className="font-mono">backups/</code>{" "}
+            -hakemistoon, joka sisältää:
           </p>
           <ul className="list-disc pl-5 text-xs text-fg/70 space-y-1">
             <li>
-              <code className="font-mono">db.sql</code> — full local D1 dump
-              (via <code className="font-mono">wrangler d1 export</code>).
+              <code className="font-mono">db.sql</code> — täysi paikallisen D1:n
+              vedos (<code className="font-mono">wrangler d1 export</code>).
             </li>
             <li>
-              <code className="font-mono">r2/</code> — copy of the local R2
-              bucket directory from{" "}
-              <code className="font-mono">.wrangler/state/v3/r2/</code> (created
-              once you upload your first photo).
+              <code className="font-mono">r2/</code> — kopio paikallisesta R2-
+              ämpäristä polusta{" "}
+              <code className="font-mono">.wrangler/state/v3/r2/</code> (syntyy,
+              kun lataat ensimmäisen kuvan).
             </li>
             <li>
-              <code className="font-mono">manifest.json</code> — snapshot
-              metadata (timestamp, file sizes, versions).
+              <code className="font-mono">manifest.json</code> — vedoksen
+              metatiedot (aikaleima, tiedostokoot, versiot).
             </li>
           </ul>
           <p className="text-fg/60 text-[11px]">
-            The <code className="font-mono">backups/</code> folder is
-            git-ignored — copy it off-machine for real disaster recovery.
+            <code className="font-mono">backups/</code>-kansio on git-ignoroitu
+            — kopioi se koneen ulkopuolelle todellista palautusta varten.
           </p>
         </div>
       </section>

@@ -10,6 +10,7 @@ import {
   type Plant,
   type Property,
 } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 const navigateMock = vi.fn();
@@ -77,7 +78,7 @@ describe("PropertyPlants", () => {
     ]);
     renderPlants();
     expect(await screen.findByText("Oak")).toBeInTheDocument();
-    expect(screen.getByText("2 plants · 2 species")).toBeInTheDocument();
+    expect(screen.getByText(t.plantsSummary(2, 2))).toBeInTheDocument();
   });
 
   it("filters by the search box", async () => {
@@ -87,7 +88,10 @@ describe("PropertyPlants", () => {
     ]);
     renderPlants();
     await screen.findByText("Oak");
-    await userEvent.type(screen.getByPlaceholderText(/Search/), "birch");
+    await userEvent.type(
+      screen.getByPlaceholderText(t.plantsSearchPlaceholder),
+      "birch",
+    );
     expect(screen.queryByText("Oak")).not.toBeInTheDocument();
     expect(screen.getByText("Birch")).toBeInTheDocument();
   });
@@ -98,8 +102,11 @@ describe("PropertyPlants", () => {
     ]);
     renderPlants();
     await screen.findByText("Oak");
-    await userEvent.type(screen.getByPlaceholderText(/Search/), "zzz");
-    expect(screen.getByText(/No plants match/)).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByPlaceholderText(t.plantsSearchPlaceholder),
+      "zzz",
+    );
+    expect(screen.getByText(t.plantsNoMatch("zzz"))).toBeInTheDocument();
   });
 
   it("navigates to the map with the plant hash on 'Show on map'", async () => {
@@ -107,7 +114,7 @@ describe("PropertyPlants", () => {
     vi.mocked(api.listPlants).mockResolvedValue([p]);
     renderPlants();
     await screen.findByText("Oak");
-    await userEvent.click(screen.getByRole("button", { name: "Show on map" }));
+    await userEvent.click(screen.getByRole("button", { name: t.showOnMap }));
     expect(navigateMock).toHaveBeenCalledWith(`/properties/p1#plant=${p.id}`);
   });
 
@@ -122,7 +129,7 @@ describe("PropertyPlants", () => {
       /Birch|Oak/,
     ).textContent;
     expect(firstNameBefore).toBe("Birch"); // asc by default
-    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+    await userEvent.click(screen.getByRole("button", { name: t.colName }));
     const firstNameAfter = within(screen.getAllByRole("row")[1]).getByText(
       /Birch|Oak/,
     ).textContent;
@@ -132,9 +139,7 @@ describe("PropertyPlants", () => {
   it("shows the empty state with no plants", async () => {
     vi.mocked(api.listPlants).mockResolvedValue([]);
     renderPlants();
-    expect(
-      await screen.findByText(/No plants in this property yet/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(t.plantsEmpty)).toBeInTheDocument();
   });
 
   it("shows an error when loading fails", async () => {
@@ -143,7 +148,7 @@ describe("PropertyPlants", () => {
     );
     renderPlants();
     await waitFor(() =>
-      expect(screen.getByText("Failed to load plants")).toBeInTheDocument(),
+      expect(screen.getByText(t.mapLoadPlantsFailed)).toBeInTheDocument(),
     );
   });
 });

@@ -16,9 +16,9 @@ export default defineConfig({
       injectRegister: "auto",
       includeAssets: ["icon.svg"],
       manifest: {
-        name: "Arboretum Mapper",
-        short_name: "Arboretum",
-        description: "Map the plants and trees on your property.",
+        name: "Arboretium",
+        short_name: "Arboretium",
+        description: "Kartoita pihasi ja mökkisi kasvit ja puut.",
         theme_color: "#3f7d44",
         background_color: "#f6f5ee",
         display: "standalone",

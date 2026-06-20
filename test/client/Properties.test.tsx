@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Properties } from "../../src/routes/Properties";
 import { api, ApiCallError, type Property } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -41,16 +42,14 @@ describe("Properties picker", () => {
     await waitFor(() =>
       expect(screen.getByText("Cottage")).toBeInTheDocument(),
     );
-    expect(screen.getByText(/3 hexes/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(t.hexes(3)))).toBeInTheDocument();
   });
 
   it("shows the empty state when the user has no properties", async () => {
     vi.mocked(api.listProperties).mockResolvedValue([]);
     renderProperties();
     await waitFor(() =>
-      expect(
-        screen.getByText("You're not a member of any property yet."),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(t.propertiesEmptyTitle)).toBeInTheDocument(),
     );
   });
 
@@ -60,7 +59,7 @@ describe("Properties picker", () => {
     );
     renderProperties();
     await waitFor(() =>
-      expect(screen.getByText("Failed to load")).toBeInTheDocument(),
+      expect(screen.getByText(t.failedToLoad)).toBeInTheDocument(),
     );
   });
 });

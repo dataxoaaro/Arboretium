@@ -4,7 +4,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, ApiCallError, type Property } from "../lib/api";
+import { api, type Property } from "../lib/api";
+import { t } from "../lib/strings";
 
 export function PropertySwitcher() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -20,9 +21,7 @@ export function PropertySwitcher() {
     api
       .listProperties()
       .then(setProperties)
-      .catch((err: unknown) =>
-        setError(err instanceof ApiCallError ? err.message : "Failed to load"),
-      );
+      .catch(() => setError(t.failedToLoad));
   }, [open, properties]);
 
   // Close on outside click / Escape.
@@ -50,7 +49,7 @@ export function PropertySwitcher() {
   if (!propertyId) return null;
 
   const current = properties?.find((p) => p.id === propertyId);
-  const label = current?.name ?? "Property";
+  const label = current?.name ?? t.switcherLabel;
 
   return (
     <div ref={containerRef} className="relative">
@@ -72,12 +71,10 @@ export function PropertySwitcher() {
             </div>
           )}
           {properties === null && !error && (
-            <div className="px-3 py-2 text-xs text-fg/60">Loading…</div>
+            <div className="px-3 py-2 text-xs text-fg/60">{t.loading}</div>
           )}
           {properties && properties.length === 0 && (
-            <div className="px-3 py-2 text-xs text-fg/60">
-              You have no other properties.
-            </div>
+            <div className="px-3 py-2 text-xs text-fg/60">{t.switcherNone}</div>
           )}
           {properties && properties.length > 0 && (
             <ul>
@@ -97,7 +94,7 @@ export function PropertySwitcher() {
                   >
                     <div className="truncate">{p.name}</div>
                     <div className="text-[11px] text-fg/50 truncate">
-                      {hexCount(p.included_hexes)} hexes
+                      {t.hexes(hexCount(p.included_hexes))}
                     </div>
                   </button>
                 </li>
@@ -110,7 +107,7 @@ export function PropertySwitcher() {
               onClick={() => setOpen(false)}
               className="block px-3 py-2 text-xs text-fg/70 hover:bg-black/5"
             >
-              Pick another property →
+              {t.switcherPickAnother}
             </Link>
           </div>
         </div>

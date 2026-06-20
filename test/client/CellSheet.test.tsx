@@ -10,6 +10,7 @@ import {
   type Plant,
 } from "../../src/lib/api";
 import { cellAtPoint } from "../../src/lib/h3";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -126,11 +127,9 @@ describe("CellSheet", () => {
 
   it("shows the empty state and offers to add a plant", async () => {
     const { onAddPlant } = renderSheet();
-    expect(
-      await screen.findByText("No plants in this spot yet."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(t.cellNoPlants)).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: /Add a plant here/ }),
+      screen.getByRole("button", { name: t.cellAddPlantHere }),
     );
     expect(onAddPlant).toHaveBeenCalledWith(H3);
   });
@@ -151,9 +150,14 @@ describe("CellSheet", () => {
       notes: "rocky",
     });
     const { onChanged } = renderSheet();
-    await screen.findByText("No plants in this spot yet.");
-    await userEvent.type(screen.getByPlaceholderText(/rocky soil/), "rocky");
-    await userEvent.click(screen.getByRole("button", { name: "Save notes" }));
+    await screen.findByText(t.cellNoPlants);
+    await userEvent.type(
+      screen.getByPlaceholderText(t.cellNotesPlaceholder),
+      "rocky",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t.cellSaveNotes }),
+    );
     await waitFor(() =>
       expect(api.setCellNotes).toHaveBeenCalledWith(PROP, H3, "rocky"),
     );
@@ -163,7 +167,7 @@ describe("CellSheet", () => {
   it("uploads a cell photo with the cell target params", async () => {
     vi.mocked(api.uploadPhoto).mockResolvedValue(photo());
     renderSheet();
-    await screen.findByText("No plants in this spot yet.");
+    await screen.findByText(t.cellNoPlants);
     const input = document.querySelector(
       'input[type="file"]',
     ) as HTMLInputElement;
@@ -184,12 +188,12 @@ describe("CellSheet", () => {
     );
     renderSheet();
     expect(await screen.findByText('"before planting"')).toBeInTheDocument();
-    expect(screen.getByText("Cell details")).toBeInTheDocument();
+    expect(screen.getByText(t.cellDetailsTitle)).toBeInTheDocument();
   });
 
   it("closes on Escape", async () => {
     const { onClose } = renderSheet();
-    await screen.findByText("No plants in this spot yet.");
+    await screen.findByText(t.cellNoPlants);
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
   });
@@ -199,6 +203,6 @@ describe("CellSheet", () => {
       rejected(new ApiCallError("nope", 500)),
     );
     renderSheet();
-    expect(await screen.findByText("nope")).toBeInTheDocument();
+    expect(await screen.findByText(t.failedToLoad)).toBeInTheDocument();
   });
 });

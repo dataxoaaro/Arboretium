@@ -5,8 +5,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { adminApi, AdminApiError } from "./admin-api";
+import { adminApi } from "./admin-api";
 import type { ResetLinkResult, UserRow } from "./admin-types";
+import { t } from "../lib/strings";
 
 export function AdminUsers() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
@@ -27,10 +28,8 @@ export function AdminUsers() {
     try {
       setError(null);
       setUsers(await adminApi.listUsers());
-    } catch (err) {
-      setError(
-        err instanceof AdminApiError ? err.message : "Failed to load users",
-      );
+    } catch {
+      setError(t.adminLoadUsersFailed);
     }
   }
 
@@ -41,8 +40,7 @@ export function AdminUsers() {
   async function remove(u: UserRow) {
     if (
       !confirm(
-        `Permanently delete ${u.display_name} (${u.email})?\n\n` +
-          `This cascades to ${u.membership_count} membership(s) and any plants/photos they own.`,
+        t.adminDeleteUserConfirm(u.display_name, u.email, u.membership_count),
       )
     )
       return;
@@ -50,8 +48,8 @@ export function AdminUsers() {
     try {
       await adminApi.deleteUser(u.id);
       await load();
-    } catch (err) {
-      setError(err instanceof AdminApiError ? err.message : "Delete failed");
+    } catch {
+      setError(t.adminDeleteUserFailed);
     } finally {
       setBusyId(null);
     }
@@ -59,7 +57,7 @@ export function AdminUsers() {
 
   async function generateLink(u: UserRow) {
     if (!issuerId) {
-      setError("No issuer user available — register a user first.");
+      setError(t.adminNoIssuer);
       return;
     }
     setBusyId(u.id);
@@ -69,10 +67,8 @@ export function AdminUsers() {
         issuerId,
       );
       setResetLink({ user: u, token: res.token, expires_at: res.expires_at });
-    } catch (err) {
-      setError(
-        err instanceof AdminApiError ? err.message : "Reset link failed",
-      );
+    } catch {
+      setError(t.adminResetLinkFailed);
     } finally {
       setBusyId(null);
     }
@@ -80,7 +76,7 @@ export function AdminUsers() {
 
   return (
     <div className="p-6 max-w-5xl">
-      <h1 className="text-xl font-semibold mb-4">Users</h1>
+      <h1 className="text-xl font-semibold mb-4">{t.adminUsersTitle}</h1>
 
       {error && (
         <div className="mb-4 border border-red-200 bg-red-50 text-red-800 rounded-md px-3 py-2 text-sm">
@@ -97,16 +93,14 @@ export function AdminUsers() {
         />
       )}
 
-      {!users && <p className="text-sm text-fg/60">Loading…</p>}
+      {!users && <p className="text-sm text-fg/60">{t.loading}</p>}
 
       {users && users.length === 0 && (
         <div className="border border-dashed border-black/15 rounded-md p-4 text-sm text-fg/60">
-          No users yet.{" "}
+          {t.adminNoUsers}{" "}
           <Link className="underline" to="/register">
-            Register one
-          </Link>{" "}
-          or run <code className="font-mono text-xs">pnpm seed</code> to create
-          the dev <code>admin@local</code> account.
+            {t.navRegister}
+          </Link>
         </div>
       )}
 
@@ -115,11 +109,11 @@ export function AdminUsers() {
           <table className="w-full text-sm">
             <thead className="bg-black/[0.03] text-left text-xs uppercase text-fg/60">
               <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Email</th>
-                <th className="px-3 py-2">Memberships</th>
-                <th className="px-3 py-2">Created</th>
-                <th className="px-3 py-2 text-right">Actions</th>
+                <th className="px-3 py-2">{t.adminColName}</th>
+                <th className="px-3 py-2">{t.adminColEmail}</th>
+                <th className="px-3 py-2">{t.adminColMemberships}</th>
+                <th className="px-3 py-2">{t.adminColCreated}</th>
+                <th className="px-3 py-2 text-right">{t.adminColActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -149,7 +143,7 @@ export function AdminUsers() {
                         onClick={() => void generateLink(u)}
                         className="text-fg/80 hover:text-fg underline disabled:opacity-50"
                       >
-                        Reset link
+                        {t.adminResetLink}
                       </button>
                       <button
                         type="button"
@@ -157,7 +151,7 @@ export function AdminUsers() {
                         onClick={() => void remove(u)}
                         className="text-red-700 hover:text-red-900 underline disabled:opacity-50"
                       >
-                        Delete
+                        {t.delete}
                       </button>
                     </div>
                   </td>
@@ -202,10 +196,10 @@ function ResetLinkBanner({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium text-amber-900">
-            Reset link for {user.display_name} ({user.email})
+            {t.adminResetBannerTitle(user.display_name, user.email)}
           </p>
           <p className="text-xs text-amber-800 mt-0.5">
-            Shown once — copy it now. Expires {expiresHuman}.
+            {t.adminResetBannerExpires(expiresHuman)}
           </p>
         </div>
         <button
@@ -213,7 +207,7 @@ function ResetLinkBanner({
           onClick={onClose}
           className="text-amber-900 hover:text-amber-700 text-xs underline"
         >
-          Dismiss
+          {t.adminDismiss}
         </button>
       </div>
       <div className="mt-2 flex gap-2">
@@ -228,7 +222,7 @@ function ResetLinkBanner({
           onClick={() => void copy()}
           className="px-3 py-1.5 rounded-md bg-amber-900 text-white text-xs hover:opacity-90"
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? t.adminCopied : t.adminCopy}
         </button>
       </div>
     </div>

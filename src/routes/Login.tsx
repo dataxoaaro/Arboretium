@@ -1,8 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { api, ApiCallError } from "../lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/use-auth";
 import { Button } from "../components/ui/Button";
+import { t } from "../lib/strings";
 
 export function Login() {
   const navigate = useNavigate();
@@ -20,9 +21,8 @@ export function Login() {
       const user = await api.login({ email, password });
       setUser(user);
       navigate("/properties", { replace: true });
-    } catch (err) {
-      const msg = err instanceof ApiCallError ? err.message : "Login failed";
-      setError(msg);
+    } catch {
+      setError(t.loginFailed);
     } finally {
       setSubmitting(false);
     }
@@ -31,11 +31,11 @@ export function Login() {
   return (
     <section className="max-w-sm">
       <h1 className="text-3xl font-semibold mb-4 font-[family-name:var(--font-display)]">
-        Login
+        {t.loginTitle}
       </h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block">
-          <span className="text-sm text-fg/70">Email</span>
+          <span className="text-sm text-fg/70">{t.email}</span>
           <input
             type="email"
             required
@@ -46,7 +46,7 @@ export function Login() {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-fg/70">Password</span>
+          <span className="text-sm text-fg/70">{t.password}</span>
           <input
             type="password"
             required
@@ -56,15 +56,15 @@ export function Login() {
             className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
+          {submitting ? t.loginSubmitting : t.loginSubmit}
         </Button>
       </form>
       <p className="text-sm text-fg/70 mt-4">
-        Need an account?{" "}
+        {t.loginNeedAccount}{" "}
         <Link to="/register" className="underline">
-          Register
+          {t.navRegister}
         </Link>
       </p>
     </section>

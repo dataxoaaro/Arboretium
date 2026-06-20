@@ -1,7 +1,8 @@
 import { type FormEvent, useState } from "react";
-import { api, ApiCallError } from "../lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/use-auth";
 import { Button } from "../components/ui/Button";
+import { t } from "../lib/strings";
 
 export function Settings() {
   const { user, logout } = useAuth();
@@ -24,10 +25,8 @@ export function Settings() {
       setCurrentPassword("");
       setNewPassword("");
       setSuccess(true);
-    } catch (err) {
-      const msg =
-        err instanceof ApiCallError ? err.message : "Failed to change password";
-      setError(msg);
+    } catch {
+      setError(t.settingsChangeFailed);
     } finally {
       setSubmitting(false);
     }
@@ -37,20 +36,23 @@ export function Settings() {
     <section className="max-w-sm space-y-6">
       <header>
         <h1 className="text-3xl font-semibold mb-1 font-[family-name:var(--font-display)]">
-          Settings
+          {t.settingsTitle}
         </h1>
         {user && (
           <p className="text-sm text-fg/70">
-            Signed in as <span className="font-medium">{user.email}</span>
+            {t.settingsSignedInAs}{" "}
+            <span className="font-medium">{user.email}</span>
           </p>
         )}
       </header>
 
       <div>
-        <h2 className="font-medium mb-2">Change password</h2>
+        <h2 className="font-medium mb-2">{t.settingsChangePassword}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <label className="block">
-            <span className="text-sm text-fg/70">Current password</span>
+            <span className="text-sm text-fg/70">
+              {t.settingsCurrentPassword}
+            </span>
             <input
               type="password"
               required
@@ -61,7 +63,7 @@ export function Settings() {
             />
           </label>
           <label className="block">
-            <span className="text-sm text-fg/70">New password (≥10 chars)</span>
+            <span className="text-sm text-fg/70">{t.settingsNewPassword}</span>
             <input
               type="password"
               required
@@ -72,20 +74,24 @@ export function Settings() {
               className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
             />
           </label>
-          {error && <p className="text-sm text-red-700">{error}</p>}
+          {error && (
+            <p className="text-sm text-[var(--color-danger)]">{error}</p>
+          )}
           {success && (
-            <p className="text-sm text-green-700">Password updated.</p>
+            <p className="text-sm text-[var(--color-accent)]">
+              {t.settingsUpdated}
+            </p>
           )}
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : "Update password"}
+            {submitting ? t.saving : t.settingsUpdate}
           </Button>
         </form>
       </div>
 
       <div>
-        <h2 className="font-medium mb-2">Session</h2>
+        <h2 className="font-medium mb-2">{t.settingsSession}</h2>
         <Button variant="secondary" onClick={() => void logout()}>
-          Sign out
+          {t.signOut}
         </Button>
       </div>
     </section>

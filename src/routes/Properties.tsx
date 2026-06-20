@@ -4,8 +4,9 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiCallError, type Property } from "../lib/api";
+import { api, type Property } from "../lib/api";
 import { cachedRead } from "../lib/cached-read";
+import { t } from "../lib/strings";
 
 export function Properties() {
   const [properties, setProperties] = useState<Property[] | null>(null);
@@ -17,9 +18,8 @@ export function Properties() {
       .then((r) => {
         if (!cancelled) setProperties(r.data);
       })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setError(err instanceof ApiCallError ? err.message : "Failed to load");
+      .catch(() => {
+        if (!cancelled) setError(t.failedToLoad);
       });
     return () => {
       cancelled = true;
@@ -29,29 +29,21 @@ export function Properties() {
   return (
     <section className="max-w-2xl mx-auto">
       <h1 className="text-3xl font-semibold mb-4 font-[family-name:var(--font-display)]">
-        Pick a property
+        {t.propertiesTitle}
       </h1>
 
       {error && (
-        <div className="mb-4 border border-red-200 bg-red-50 text-red-800 rounded-md px-3 py-2 text-sm">
+        <div className="mb-4 border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-xl px-3 py-2 text-sm">
           {error}
         </div>
       )}
 
-      {properties === null && <p className="text-sm text-fg/60">Loading…</p>}
+      {properties === null && <p className="text-sm text-muted">{t.loading}</p>}
 
       {properties && properties.length === 0 && (
         <div className="border border-dashed border-[var(--color-border)] rounded-2xl p-6 text-muted">
-          <p className="font-medium text-fg mb-1">
-            You're not a member of any property yet.
-          </p>
-          <p>
-            Ask the admin to add you. They can do it from{" "}
-            <Link to="/admin/properties" className="underline">
-              /admin/properties
-            </Link>{" "}
-            → choose a property → <em>Members</em>.
-          </p>
+          <p className="font-medium text-fg mb-1">{t.propertiesEmptyTitle}</p>
+          <p>{t.propertiesEmptyBody}</p>
         </div>
       )}
 
@@ -65,10 +57,10 @@ export function Properties() {
               >
                 <div className="text-lg font-medium">{p.name}</div>
                 <div className="text-sm text-muted mt-1">
-                  {hexCount(p.included_hexes)} hexes ·{" "}
+                  {t.hexes(hexCount(p.included_hexes))} ·{" "}
                   {p.center_lat != null && p.center_lng != null
                     ? `${p.center_lat.toFixed(3)}, ${p.center_lng.toFixed(3)}`
-                    : "no centre"}
+                    : t.noCentre}
                 </div>
               </Link>
             </li>

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { PropertyLayout } from "../../src/routes/PropertyLayout";
 import { useCurrentProperty } from "../../src/lib/property-context";
 import { api, ApiCallError, type Property } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -48,7 +49,7 @@ describe("PropertyLayout", () => {
   it("loads the property and renders the nested route via context", async () => {
     vi.mocked(api.getProperty).mockResolvedValue(prop());
     renderLayout();
-    expect(screen.getByText("Loading property…")).toBeInTheDocument();
+    expect(screen.getByText(t.propertyLoading)).toBeInTheDocument();
     expect(await screen.findByText("CHILD: Cottage")).toBeInTheDocument();
   });
 
@@ -66,7 +67,7 @@ describe("PropertyLayout", () => {
     );
     renderLayout();
     await waitFor(() =>
-      expect(screen.getByText("Server boom")).toBeInTheDocument(),
+      expect(screen.getByText(t.propertyLoadFailed)).toBeInTheDocument(),
     );
   });
 });

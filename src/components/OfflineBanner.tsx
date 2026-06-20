@@ -2,6 +2,7 @@
 // never shifts the full-height map screen; sits below the header, clear of the
 // map's corner controls.
 import { useOnline } from "../lib/use-online";
+import { t } from "../lib/strings";
 
 export function OfflineBanner() {
   const online = useOnline();
@@ -11,7 +12,7 @@ export function OfflineBanner() {
       role="status"
       className="fixed top-16 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100%-1rem)] rounded-full bg-[var(--color-amber)] text-[var(--color-fg)] shadow-lg px-4 py-2 text-sm font-medium text-center"
     >
-      Offline — showing your last saved data
+      {t.offlineMessage}
     </div>
   );
 }

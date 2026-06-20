@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "../lib/api";
+import { t } from "../lib/strings";
 
 export function HeaderMenu({
   user,
@@ -56,13 +57,13 @@ export function HeaderMenu({
           className="absolute right-0 mt-2 w-56 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-lg overflow-hidden z-40"
         >
           <MenuLink to="/properties" onClick={() => setOpen(false)}>
-            My properties
+            {t.menuMyProperties}
           </MenuLink>
           <MenuLink to="/settings" onClick={() => setOpen(false)}>
-            Settings
+            {t.menuSettings}
           </MenuLink>
           <MenuLink to="/admin" onClick={() => setOpen(false)}>
-            Admin
+            {t.menuAdmin}
           </MenuLink>
           <button
             type="button"
@@ -73,7 +74,7 @@ export function HeaderMenu({
             }}
             className="w-full text-left min-h-14 px-4 border-t border-[var(--color-border)] text-[var(--color-danger)] font-medium hover:bg-black/[0.03]"
           >
-            Sign out
+            {t.signOut}
           </button>
         </div>
       )}

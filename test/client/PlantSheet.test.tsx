@@ -6,6 +6,7 @@ import {
   type PlantSheetMode,
 } from "../../src/components/plants/PlantSheet";
 import { api, ApiCallError, type Plant, type Photo } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -109,9 +110,12 @@ describe("PlantSheet create", () => {
   it("creates a plant from the form", async () => {
     vi.mocked(api.createPlant).mockResolvedValue(plant());
     const { onSaved } = renderSheet(CREATE);
-    expect(screen.getByText("Add plant")).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("Common name *"), "Maple");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByText(t.plantAddTitle)).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText(t.plantCommonNameField),
+      "Maple",
+    );
+    await userEvent.click(screen.getByRole("button", { name: t.save }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(api.createPlant).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,7 +132,7 @@ describe("PlantSheet create", () => {
     // component's own validation runs.
     fireEvent.submit(document.querySelector("form")!);
     expect(
-      await screen.findByText("Common name is required"),
+      await screen.findByText(t.plantCommonNameRequired),
     ).toBeInTheDocument();
     expect(api.createPlant).not.toHaveBeenCalled();
   });
@@ -138,11 +142,12 @@ describe("PlantSheet create", () => {
       rejected(new ApiCallError("h3_res15 is not in property", 400)),
     );
     renderSheet(CREATE);
-    await userEvent.type(screen.getByLabelText("Common name *"), "Maple");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(
-      await screen.findByText("h3_res15 is not in property"),
-    ).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText(t.plantCommonNameField),
+      "Maple",
+    );
+    await userEvent.click(screen.getByRole("button", { name: t.save }));
+    expect(await screen.findByText(t.plantSaveFailed)).toBeInTheDocument();
   });
 });
 
@@ -151,12 +156,12 @@ describe("PlantSheet edit", () => {
     vi.mocked(api.updatePlant).mockResolvedValue(plant({ common_name: "Elm" }));
     const { onSaved } = renderSheet({ kind: "edit", plant: plant() });
     const nameInput = screen.getByLabelText(
-      "Common name *",
+      t.plantCommonNameField,
     ) as HTMLInputElement;
     expect(nameInput.value).toBe("Oak");
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Elm");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getByRole("button", { name: t.save }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(api.updatePlant).toHaveBeenCalledWith(
       "plant-1",
@@ -170,7 +175,7 @@ describe("PlantSheet info", () => {
     const { onSaved } = renderSheet({ kind: "info", plant: plant() });
     expect(screen.getByText("Quercus")).toBeInTheDocument();
     expect(screen.getByText("north corner")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: t.edit }));
     expect(onSaved).toHaveBeenCalled();
   });
 
@@ -181,7 +186,7 @@ describe("PlantSheet info", () => {
     );
     vi.mocked(api.deletePlant).mockResolvedValue({ ok: true });
     const { onDeleted } = renderSheet({ kind: "info", plant: plant() });
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: t.delete }));
     await waitFor(() => expect(onDeleted).toHaveBeenCalledWith("plant-1"));
   });
 
@@ -191,7 +196,7 @@ describe("PlantSheet info", () => {
       vi.fn(() => false),
     );
     const { onDeleted } = renderSheet({ kind: "info", plant: plant() });
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: t.delete }));
     expect(api.deletePlant).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
   });
@@ -216,30 +221,38 @@ describe("PlantSheet timeline", () => {
   it("loads and lists photos, and toggles sort order", async () => {
     vi.mocked(api.listPhotosForPlant).mockResolvedValue([photo()]);
     renderSheet({ kind: "info", plant: plant() });
-    await userEvent.click(screen.getByRole("button", { name: "Timeline" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t.plantTabTimeline }),
+    );
     expect(await screen.findByText('"spring"')).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Oldest first" }),
+      screen.getByRole("button", { name: t.photoOldestFirst }),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Oldest first" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t.photoOldestFirst }),
+    );
     expect(
-      screen.getByRole("button", { name: "Newest first" }),
+      screen.getByRole("button", { name: t.photoNewestFirst }),
     ).toBeInTheDocument();
   });
 
   it("shows the empty state with no photos", async () => {
     vi.mocked(api.listPhotosForPlant).mockResolvedValue([]);
     renderSheet({ kind: "info", plant: plant() });
-    await userEvent.click(screen.getByRole("button", { name: "Timeline" }));
-    expect(await screen.findByText("No photos yet.")).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: t.plantTabTimeline }),
+    );
+    expect(await screen.findByText(t.photoNone)).toBeInTheDocument();
   });
 
   it("uploads a chosen file via preparePhoto", async () => {
     vi.mocked(api.listPhotosForPlant).mockResolvedValue([]);
     vi.mocked(api.uploadPhoto).mockResolvedValue(photo());
     renderSheet({ kind: "info", plant: plant() });
-    await userEvent.click(screen.getByRole("button", { name: "Timeline" }));
-    await screen.findByText("No photos yet.");
+    await userEvent.click(
+      screen.getByRole("button", { name: t.plantTabTimeline }),
+    );
+    await screen.findByText(t.photoNone);
 
     const file = new File(["bytes"], "pic.jpg", { type: "image/jpeg" });
     const input = document.querySelector(

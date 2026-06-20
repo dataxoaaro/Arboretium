@@ -50,8 +50,6 @@ authRoutes.post("/register", async (c) => {
   }>();
   const email = typeof body.email === "string" ? body.email.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
-  const displayName =
-    typeof body.display_name === "string" ? body.display_name.trim() : "";
   const sitePassword =
     typeof body.site_password === "string" ? body.site_password : "";
 
@@ -64,9 +62,12 @@ authRoutes.post("/register", async (c) => {
       400,
     );
   }
-  if (!displayName) {
-    return c.json({ error: "Display name required" }, 400);
-  }
+  // Display name is optional — keep signup simple. Default it to the email so
+  // the (still-present) column and audit trail stay populated.
+  const displayName =
+    typeof body.display_name === "string" && body.display_name.trim()
+      ? body.display_name.trim()
+      : email;
 
   // Constant-time site-password comparison so timing doesn't reveal whether
   // the field length / scheme matched.

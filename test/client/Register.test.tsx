@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Register } from "../../src/routes/Register";
 import { AuthContext, type AuthState } from "../../src/lib/use-auth";
 import { api, ApiCallError } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
@@ -34,13 +35,12 @@ function renderRegister(setUser = vi.fn()) {
 }
 
 async function fillForm() {
-  await userEvent.type(screen.getByLabelText("Email"), "a@b.c");
-  await userEvent.type(screen.getByLabelText("Display name"), "Aaro");
+  await userEvent.type(screen.getByLabelText(t.email), "a@b.c");
   await userEvent.type(
-    screen.getByLabelText("Password (≥10 chars)"),
+    screen.getByLabelText(t.passwordWithRule),
     "a-good-password",
   );
-  await userEvent.type(screen.getByLabelText("Site password"), "site-secret");
+  await userEvent.type(screen.getByLabelText(t.sitePassword), "site-secret");
 }
 
 describe("Register", () => {
@@ -56,7 +56,7 @@ describe("Register", () => {
 
     await fillForm();
     await userEvent.click(
-      screen.getByRole("button", { name: "Create account" }),
+      screen.getByRole("button", { name: t.registerSubmit }),
     );
 
     await waitFor(() =>
@@ -65,7 +65,6 @@ describe("Register", () => {
     expect(api.register).toHaveBeenCalledWith({
       email: "a@b.c",
       password: "a-good-password",
-      display_name: "Aaro",
       site_password: "site-secret",
     });
     expect(setUser).toHaveBeenCalledWith(user);
@@ -78,12 +77,10 @@ describe("Register", () => {
     renderRegister();
     await fillForm();
     await userEvent.click(
-      screen.getByRole("button", { name: "Create account" }),
+      screen.getByRole("button", { name: t.registerSubmit }),
     );
     await waitFor(() =>
-      expect(
-        screen.getByText("Registration not authorised"),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(t.registerFailed)).toBeInTheDocument(),
     );
   });
 });

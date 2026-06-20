@@ -1,6 +1,7 @@
 // Sub-navigation inside a property: Map (default) and Plants (list view).
 
 import { NavLink, useParams } from "react-router-dom";
+import { t } from "../lib/strings";
 
 export function PropertyTabs() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -8,9 +9,9 @@ export function PropertyTabs() {
   return (
     <nav className="flex border-b border-[var(--color-border)] bg-[var(--color-surface)] px-2">
       <Tab to={`/properties/${propertyId}`} end>
-        Map
+        {t.tabMap}
       </Tab>
-      <Tab to={`/properties/${propertyId}/plants`}>Plants</Tab>
+      <Tab to={`/properties/${propertyId}/plants`}>{t.tabPlants}</Tab>
     </nav>
   );
 }

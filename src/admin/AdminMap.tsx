@@ -383,7 +383,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
   function clearAll() {
     if (
       !confirm(
-        "Clear the boundary and hex selection? This cannot be undone via the UI.",
+        "Tyhjennetäänkö rajat ja ruutuvalinta? Tätä ei voi perua käyttöliittymästä.",
       )
     )
       return;
@@ -441,7 +441,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
         map.flyTo({ center: [lng, lat], zoom: 18, duration: 600 });
         return;
       }
-      setError("Coordinates out of range (lat ±90, lng ±180)");
+      setError("Koordinaatit alueen ulkopuolella (lat ±90, lng ±180)");
       return;
     }
 
@@ -478,7 +478,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
         map.flyTo({ center: [lng, lat], zoom: 16, duration: 600 });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
+      setError(err instanceof Error ? err.message : "Haku epäonnistui");
     } finally {
       setSearching(false);
     }
@@ -512,10 +512,10 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
             } disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             {m === "draw"
-              ? "1. Draw boundary"
+              ? "1. Piirrä rajat"
               : m === "hexes"
-                ? "2. Pick hexes"
-                : "View"}
+                ? "2. Valitse ruudut"
+                : "Katsele"}
           </button>
         ))}
       </div>
@@ -527,7 +527,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder='Address or "lat, lng" — e.g. "Helsinki" or "60.17, 24.94"'
+          placeholder='Osoite tai "lat, lng" — esim. "Helsinki" tai "60.17, 24.94"'
           className="flex-1 px-3 py-2 bg-transparent outline-none min-w-0"
         />
         <button
@@ -535,7 +535,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
           disabled={searching || !searchQuery.trim()}
           className="px-3 py-2 border-l border-black/10 hover:bg-black/5 disabled:opacity-50"
         >
-          {searching ? "…" : "Go"}
+          {searching ? "…" : "Hae"}
         </button>
       </form>
 
@@ -551,14 +551,15 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
         <div className="absolute bottom-2 left-2 right-2 bg-white/95 border border-black/10 rounded shadow px-3 py-2 text-xs flex items-center gap-3 flex-wrap">
           {mode === "draw" ? (
             <span className="text-fg/70">
-              Click to add vertices ({vertices.length} so far). Drag a vertex to
-              move it. Right-click or press Finish to close the polygon.
+              Napauta lisätäksesi kulmapisteitä ({vertices.length} kpl). Vedä
+              pistettä siirtääksesi sitä. Napsauta hiiren oikealla tai paina
+              Valmis sulkeaksesi alueen.
             </span>
           ) : (
             <span className="text-fg/70">
-              Drag any vertex to refine the boundary. Click a hex to toggle.{" "}
-              {includedHexes.size.toLocaleString()} included. Zoom ≥ 17 to see
-              res-15 hexes.
+              Vedä pistettä tarkentaaksesi rajaa. Napauta ruutua valitaksesi.{" "}
+              {includedHexes.size.toLocaleString()} valittu. Zoomaa ≥ 17
+              nähdäksesi taso-15-ruudut.
             </span>
           )}
           <div className="flex-1" />
@@ -570,7 +571,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
                 disabled={vertices.length === 0}
                 className="px-2 py-1 rounded bg-black/5 hover:bg-black/10 disabled:opacity-40"
               >
-                Undo vertex
+                Kumoa piste
               </button>
               <button
                 type="button"
@@ -578,7 +579,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
                 disabled={vertices.length < 3}
                 className="px-2 py-1 rounded bg-fg text-bg hover:opacity-90 disabled:opacity-40"
               >
-                Finish boundary
+                Valmis
               </button>
             </>
           )}
@@ -589,14 +590,14 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
                 onClick={selectAllInPolygon}
                 className="px-2 py-1 rounded bg-black/5 hover:bg-black/10"
               >
-                Select all in polygon
+                Valitse kaikki alueelta
               </button>
               <button
                 type="button"
                 onClick={clearHexSelection}
                 className="px-2 py-1 rounded bg-black/5 hover:bg-black/10"
               >
-                Deselect all
+                Tyhjennä valinta
               </button>
             </>
           )}
@@ -606,7 +607,7 @@ export function AdminMap({ initial, initialView, onChange }: AdminMapProps) {
               onClick={clearAll}
               className="px-2 py-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
             >
-              Reset
+              Nollaa
             </button>
           )}
         </div>

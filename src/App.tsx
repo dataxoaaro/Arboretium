@@ -18,6 +18,7 @@ import { PropertySwitcher } from "./components/PropertySwitcher";
 import { HeaderMenu } from "./components/HeaderMenu";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { useAuth } from "./lib/use-auth";
+import { t } from "./lib/strings";
 
 export function App() {
   const { user, logout, loading } = useAuth();
@@ -30,7 +31,7 @@ export function App() {
           to={user ? "/properties" : "/"}
           className="text-xl font-semibold text-[var(--color-accent)] font-[family-name:var(--font-display)] shrink-0"
         >
-          Arboretum
+          {t.brand}
         </Link>
         {!loading && user && (
           <Routes>
@@ -51,13 +52,13 @@ export function App() {
                 to="/login"
                 className="min-h-11 px-3 inline-flex items-center rounded-xl hover:bg-black/5"
               >
-                Sign in
+                {t.navSignIn}
               </Link>
               <Link
                 to="/register"
                 className="min-h-11 px-4 inline-flex items-center rounded-xl bg-[var(--color-accent)] text-white font-medium"
               >
-                Register
+                {t.navRegister}
               </Link>
             </nav>
           ))}

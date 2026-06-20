@@ -8,21 +8,20 @@
 // the single source of truth.
 
 import { NavLink, Outlet } from "react-router-dom";
+import { t } from "../lib/strings";
 
 export function AdminLayout() {
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <aside className="w-56 border-r border-black/10 bg-black/[0.02] flex flex-col">
         <div className="px-4 py-4 border-b border-black/10">
-          <div className="text-sm font-semibold">Admin</div>
-          <div className="text-[11px] text-fg/60 mt-0.5">
-            Properties · Users · Backups
-          </div>
+          <div className="text-sm font-semibold">{t.adminTitle}</div>
+          <div className="text-[11px] text-fg/60 mt-0.5">{t.adminSubtitle}</div>
         </div>
         <nav className="flex-1 p-2 text-sm flex flex-col gap-1">
-          <NavItem to="/admin/properties">Properties</NavItem>
-          <NavItem to="/admin/users">Users</NavItem>
-          <NavItem to="/admin/backups">Backups</NavItem>
+          <NavItem to="/admin/properties">{t.adminNavProperties}</NavItem>
+          <NavItem to="/admin/users">{t.adminNavUsers}</NavItem>
+          <NavItem to="/admin/backups">{t.adminNavBackups}</NavItem>
         </nav>
         <div className="px-4 py-3 border-t border-black/10 text-[11px] text-fg/60">
           Endpoints 404 in prod unless <code>LOCAL_ADMIN=true</code>.

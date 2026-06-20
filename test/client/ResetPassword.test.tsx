@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ResetPassword } from "../../src/routes/ResetPassword";
 import { api, ApiCallError } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 import { rejected } from "./rejected";
 
 const navigateMock = vi.fn();
@@ -34,14 +35,12 @@ describe("ResetPassword", () => {
     renderReset("tok-abc");
 
     await userEvent.type(
-      screen.getByLabelText("New password (≥10 chars)"),
+      screen.getByLabelText(t.resetNewPassword),
       "new-password-xx",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Reset password" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: t.resetSubmit }));
 
-    expect(await screen.findByText(/Done\. Redirecting/)).toBeInTheDocument();
+    expect(await screen.findByText(t.resetDoneBody)).toBeInTheDocument();
     expect(api.resetPassword).toHaveBeenCalledWith({
       token: "tok-abc",
       new_password: "new-password-xx",
@@ -54,14 +53,10 @@ describe("ResetPassword", () => {
     );
     renderReset();
     await userEvent.type(
-      screen.getByLabelText("New password (≥10 chars)"),
+      screen.getByLabelText(t.resetNewPassword),
       "new-password-xx",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Reset password" }),
-    );
-    expect(
-      await screen.findByText("Invalid or expired token"),
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: t.resetSubmit }));
+    expect(await screen.findByText(t.resetFailed)).toBeInTheDocument();
   });
 });

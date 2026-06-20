@@ -29,6 +29,7 @@ import {
 } from "../../lib/h3";
 import { readHexMode, writeHexMode } from "./visibility-mode";
 import { BasemapToggle } from "./BasemapToggle";
+import { t } from "../../lib/strings";
 
 const SRC_BASEMAP = "basemap";
 const LAYER_BASEMAP = "basemap";
@@ -525,22 +526,20 @@ export function MapView({
           <button
             type="button"
             onClick={() => changeHexMode("off")}
-            className={`px-3 py-2 ${
+            className={`min-h-11 px-4 ${
               hexMode === "off" ? "bg-black/10 font-medium" : "hover:bg-black/5"
             }`}
-            title="Hide the hex grid"
           >
-            Hexes off
+            {t.hexesOff}
           </button>
           <button
             type="button"
             onClick={() => changeHexMode("on")}
-            className={`px-3 py-2 ${
+            className={`min-h-11 px-4 ${
               hexMode === "on" ? "bg-black/10 font-medium" : "hover:bg-black/5"
             }`}
-            title="Show only the property's res-15 cells; occupied cells are green"
           >
-            Hexes on
+            {t.hexesOn}
           </button>
         </div>
       </div>

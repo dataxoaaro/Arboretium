@@ -7,15 +7,10 @@
 // Closed by tapping the backdrop, pressing Escape, or the close button.
 
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  api,
-  ApiCallError,
-  type Photo,
-  type Plant,
-  type PlantInput,
-} from "../../lib/api";
+import { api, type Photo, type Plant, type PlantInput } from "../../lib/api";
 import { preparePhoto } from "../../lib/photos";
 import { Button } from "../ui/Button";
+import { t } from "../../lib/strings";
 
 export type PlantSheetMode =
   | {
@@ -101,13 +96,13 @@ function PlantInfo({
   const [error, setError] = useState<string | null>(null);
 
   async function del() {
-    if (!confirm(`Delete "${plant.common_name}"?`)) return;
+    if (!confirm(t.plantDeleteConfirm(plant.common_name))) return;
     setBusy(true);
     try {
       await api.deletePlant(plant.id);
       onDeleted(plant.id);
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Delete failed");
+    } catch {
+      setError(t.plantDeleteFailed);
     } finally {
       setBusy(false);
     }
@@ -118,13 +113,13 @@ function PlantInfo({
       <SheetHeader title={plant.common_name} onClose={onClose} />
       <div className="flex border-b border-black/10 text-sm">
         <TabButton active={tab === "info"} onClick={() => setTab("info")}>
-          Info
+          {t.plantTabInfo}
         </TabButton>
         <TabButton
           active={tab === "timeline"}
           onClick={() => setTab("timeline")}
         >
-          Timeline
+          {t.plantTabTimeline}
         </TabButton>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
@@ -135,28 +130,28 @@ function PlantInfo({
         )}
         {tab === "info" && (
           <>
-            <Field label="Common name">{plant.common_name}</Field>
-            <Field label="Latin name">{plant.latin_name ?? "—"}</Field>
-            <Field label="Type">{plant.plant_type ?? "—"}</Field>
-            <Field label="Planted">{plant.planted_date ?? "—"}</Field>
-            <Field label="Source">{plant.source ?? "—"}</Field>
-            <Field label="Notes">
+            <Field label={t.plantCommonName}>{plant.common_name}</Field>
+            <Field label={t.plantLatinName}>{plant.latin_name ?? "—"}</Field>
+            <Field label={t.plantType}>{plant.plant_type ?? "—"}</Field>
+            <Field label={t.plantPlanted}>{plant.planted_date ?? "—"}</Field>
+            <Field label={t.plantSource}>{plant.source ?? "—"}</Field>
+            <Field label={t.plantNotes}>
               {plant.notes ? (
                 <p className="whitespace-pre-wrap">{plant.notes}</p>
               ) : (
                 "—"
               )}
             </Field>
-            <Field label="Cell">
+            <Field label={t.plantCell}>
               <code className="font-mono text-xs">{plant.h3_res15}</code>
             </Field>
-            <Field label="Position">
+            <Field label={t.plantPosition}>
               {plant.lat.toFixed(6)}, {plant.lng.toFixed(6)}
             </Field>
-            <Field label="Created">
+            <Field label={t.plantCreated}>
               {new Date(plant.created_at).toLocaleString()}
             </Field>
-            <Field label="Updated">
+            <Field label={t.plantUpdated}>
               {new Date(plant.updated_at).toLocaleString()}
             </Field>
           </>
@@ -165,11 +160,11 @@ function PlantInfo({
       </div>
       <SheetFooter>
         <Button variant="danger" onClick={() => void del()} disabled={busy}>
-          Delete
+          {t.delete}
         </Button>
         <div className="flex-1" />
         <Button variant="primary" size="lg" onClick={onEdit}>
-          Edit
+          {t.edit}
         </Button>
       </SheetFooter>
     </>
@@ -211,10 +206,8 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
     try {
       setError(null);
       setPhotos(await api.listPhotosForPlant(plant.id));
-    } catch (err) {
-      setError(
-        err instanceof ApiCallError ? err.message : "Failed to load photos",
-      );
+    } catch {
+      setError(t.photoLoadFailed);
     }
   }
 
@@ -236,31 +229,31 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
         filename: file.name,
       });
       await load();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Upload failed");
+    } catch {
+      setError(t.photoUploadFailed);
     } finally {
       setUploading(false);
     }
   }
 
   async function recaption(photo: Photo) {
-    const next = prompt("Caption", photo.caption ?? "");
+    const next = prompt(t.photoCaptionPrompt, photo.caption ?? "");
     if (next === null) return;
     try {
       await api.updatePhoto(photo.id, next.trim() || null);
       await load();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Update failed");
+    } catch {
+      setError(t.photoCaptionFailed);
     }
   }
 
   async function deletePhoto(photo: Photo) {
-    if (!confirm("Delete this photo? This cannot be undone.")) return;
+    if (!confirm(t.photoDeleteConfirm)) return;
     try {
       await api.deletePhoto(photo.id);
       await load();
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Delete failed");
+    } catch {
+      setError(t.photoDeleteFailed);
     }
   }
 
@@ -276,7 +269,7 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
     <div className="space-y-3 text-sm">
       <div className="flex items-center gap-2">
         <label className="min-h-12 px-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] inline-flex items-center font-medium cursor-pointer">
-          {uploading ? "Uploading…" : "Add photo"}
+          {uploading ? t.photoUploading : t.photoAdd}
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -296,7 +289,7 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
           onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
           className="text-xs underline text-fg/70 hover:text-fg"
         >
-          {sortDir === "asc" ? "Oldest first" : "Newest first"}
+          {sortDir === "asc" ? t.photoOldestFirst : t.photoNewestFirst}
         </button>
       </div>
 
@@ -306,9 +299,9 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
         </div>
       )}
 
-      {sorted === null && <p className="text-xs text-fg/60">Loading…</p>}
+      {sorted === null && <p className="text-xs text-fg/60">{t.loading}</p>}
       {sorted && sorted.length === 0 && (
-        <p className="text-xs text-fg/60">No photos yet.</p>
+        <p className="text-xs text-fg/60">{t.photoNone}</p>
       )}
 
       {sorted && sorted.length > 0 && (
@@ -330,7 +323,7 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
                     photo.taken_at ?? photo.uploaded_at,
                   ).toLocaleString()}
                   {photo.taken_at == null && (
-                    <span className="text-fg/40"> (upload time)</span>
+                    <span className="text-fg/40"> {t.photoUploadTime}</span>
                   )}
                 </span>
                 {photo.caption && (
@@ -342,14 +335,14 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
                   onClick={() => void recaption(photo)}
                   className="underline text-fg/70 hover:text-fg"
                 >
-                  Caption
+                  {t.photoCaption}
                 </button>
                 <button
                   type="button"
                   onClick={() => void deletePhoto(photo)}
-                  className="underline text-red-700 hover:text-red-900"
+                  className="underline text-[var(--color-danger)]"
                 >
-                  Delete
+                  {t.delete}
                 </button>
               </div>
             </li>
@@ -386,7 +379,7 @@ function PlantForm({
     e.preventDefault();
     setError(null);
     if (!commonName.trim()) {
-      setError("Common name is required");
+      setError(t.plantCommonNameRequired);
       return;
     }
     setSubmitting(true);
@@ -418,8 +411,8 @@ function PlantForm({
         saved = await api.createPlant(input);
       }
       onSaved(saved);
-    } catch (err) {
-      setError(err instanceof ApiCallError ? err.message : "Save failed");
+    } catch {
+      setError(t.plantSaveFailed);
     } finally {
       setSubmitting(false);
     }
@@ -428,7 +421,7 @@ function PlantForm({
   return (
     <>
       <SheetHeader
-        title={isEdit ? "Edit plant" : "Add plant"}
+        title={isEdit ? t.plantEditTitle : t.plantAddTitle}
         onClose={onClose}
       />
       <form
@@ -443,13 +436,13 @@ function PlantForm({
           )}
           {!isEdit && (
             <p className="text-xs text-fg/60">
-              Cell:{" "}
+              {t.plantCellLabel}{" "}
               <code className="font-mono">
                 {(mode as Extract<PlantSheetMode, { kind: "create" }>).cell}
               </code>
             </p>
           )}
-          <FormField label="Common name *">
+          <FormField label={t.plantCommonNameField}>
             <input
               required
               autoFocus
@@ -458,37 +451,37 @@ function PlantForm({
               className={inputClass}
             />
           </FormField>
-          <FormField label="Latin name">
+          <FormField label={t.plantLatinName}>
             <input
               value={latinName ?? ""}
               onChange={(e) => setLatinName(e.target.value)}
               className={inputClass}
             />
           </FormField>
-          <FormField label="Type">
+          <FormField label={t.plantType}>
             <input
               value={plantType ?? ""}
               onChange={(e) => setPlantType(e.target.value)}
-              placeholder="e.g. tree, shrub, perennial"
+              placeholder={t.plantTypePlaceholder}
               className={inputClass}
             />
           </FormField>
-          <FormField label="Planted (free text or YYYY-MM-DD)">
+          <FormField label={t.plantPlantedField}>
             <input
               value={plantedDate ?? ""}
               onChange={(e) => setPlantedDate(e.target.value)}
               className={inputClass}
             />
           </FormField>
-          <FormField label="Source">
+          <FormField label={t.plantSource}>
             <input
               value={source ?? ""}
               onChange={(e) => setSource(e.target.value)}
-              placeholder="Nursery, gift, self-seeded…"
+              placeholder={t.plantSourcePlaceholder}
               className={inputClass}
             />
           </FormField>
-          <FormField label="Notes">
+          <FormField label={t.plantNotes}>
             <textarea
               value={notes ?? ""}
               onChange={(e) => setNotes(e.target.value)}
@@ -499,11 +492,11 @@ function PlantForm({
         </div>
         <SheetFooter>
           <Button variant="ghost" type="button" onClick={onClose}>
-            Cancel
+            {t.cancel}
           </Button>
           <div className="flex-1" />
           <Button type="submit" size="lg" disabled={submitting}>
-            {submitting ? "Saving…" : "Save"}
+            {submitting ? t.saving : t.save}
           </Button>
         </SheetFooter>
       </form>
@@ -530,7 +523,7 @@ function SheetHeader({
         type="button"
         onClick={onClose}
         className="min-h-12 min-w-12 -mr-2 rounded-full text-2xl text-muted hover:bg-black/5 inline-flex items-center justify-center"
-        aria-label="Close"
+        aria-label={t.close}
       >
         ✕
       </button>

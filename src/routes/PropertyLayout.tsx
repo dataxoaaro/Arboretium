@@ -7,6 +7,7 @@ import { Outlet, useParams, Navigate } from "react-router-dom";
 import { api, ApiCallError, type Property } from "../lib/api";
 import { cachedRead } from "../lib/cached-read";
 import { CurrentPropertyContext } from "../lib/property-context";
+import { t } from "../lib/strings";
 
 export function PropertyLayout() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -28,11 +29,8 @@ export function PropertyLayout() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        if (err instanceof ApiCallError) {
-          setError({ status: err.status, message: err.message });
-        } else {
-          setError({ status: 500, message: "Failed to load property" });
-        }
+        const status = err instanceof ApiCallError ? err.status : 500;
+        setError({ status, message: t.propertyLoadFailed });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -45,7 +43,7 @@ export function PropertyLayout() {
   if (!propertyId) return <Navigate to="/properties" replace />;
 
   if (loading) {
-    return <div className="p-6 text-sm text-fg/60">Loading property…</div>;
+    return <div className="p-6 text-sm text-muted">{t.propertyLoading}</div>;
   }
 
   if (error) {

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { HeaderMenu } from "../../src/components/HeaderMenu";
 import type { User } from "../../src/lib/api";
+import { t } from "../../src/lib/strings";
 
 const USER: User = {
   id: "u",
@@ -28,17 +29,17 @@ describe("HeaderMenu", () => {
     await userEvent.click(screen.getByRole("button", { name: /Aaro/ }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "My properties" }),
+      screen.getByRole("menuitem", { name: t.menuMyProperties }),
     ).toHaveAttribute("href", "/properties");
     expect(
-      screen.getByRole("menuitem", { name: "Settings" }),
+      screen.getByRole("menuitem", { name: t.menuSettings }),
     ).toBeInTheDocument();
   });
 
   it("signs out and closes the menu", async () => {
     const { logout } = renderMenu();
     await userEvent.click(screen.getByRole("button", { name: /Aaro/ }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: t.signOut }));
     expect(logout).toHaveBeenCalled();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });

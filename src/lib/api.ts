@@ -121,7 +121,7 @@ export const api = {
   register(input: {
     email: string;
     password: string;
-    display_name: string;
+    display_name?: string;
     site_password: string;
   }): Promise<User> {
     return request("/auth/register", {

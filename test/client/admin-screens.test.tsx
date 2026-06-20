@@ -13,6 +13,7 @@ import type {
   UserRow,
 } from "../../src/admin/admin-types";
 import { rejected } from "./rejected";
+import { t } from "../../src/lib/strings";
 
 vi.mock("../../src/admin/admin-api", async (importOriginal) => {
   const actual =
@@ -49,10 +50,14 @@ describe("AdminLayout", () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole("link", { name: "Properties" }),
+      screen.getByRole("link", { name: t.adminNavProperties }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Backups" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: t.adminNavUsers }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: t.adminNavBackups }),
+    ).toBeInTheDocument();
     expect(screen.getByText("OUTLET CONTENT")).toBeInTheDocument();
   });
 });
@@ -78,7 +83,7 @@ describe("AdminBackups", () => {
       rejected(new AdminApiError("boom", 500)),
     );
     inRouter(<AdminBackups />);
-    expect(await screen.findByText("boom")).toBeInTheDocument();
+    expect(await screen.findByText(t.adminLoadStatsFailed)).toBeInTheDocument();
   });
 });
 
@@ -117,10 +122,12 @@ describe("AdminProperties", () => {
 
     expect(await screen.findByText("Active One")).toBeInTheDocument();
     expect(screen.getByText("Old One")).toBeInTheDocument();
-    expect(screen.getByText("Active (1)")).toBeInTheDocument();
-    expect(screen.getByText("Archived (1)")).toBeInTheDocument();
+    expect(screen.getByText(t.adminActive(1))).toBeInTheDocument();
+    expect(screen.getByText(t.adminArchived(1))).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t.adminArchiveAction }),
+    );
     await waitFor(() =>
       expect(adminApi.archiveProperty).toHaveBeenCalledWith(active.id),
     );
@@ -132,7 +139,7 @@ describe("AdminProperties", () => {
     vi.mocked(adminApi.restoreProperty).mockResolvedValue({ ok: true });
     inRouter(<AdminProperties />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Restore" }),
+      await screen.findByRole("button", { name: t.adminRestoreAction }),
     );
     await waitFor(() =>
       expect(adminApi.restoreProperty).toHaveBeenCalledWith(archived.id),
@@ -144,7 +151,9 @@ describe("AdminProperties", () => {
       rejected(new AdminApiError("nope", 500)),
     );
     inRouter(<AdminProperties />);
-    expect(await screen.findByText("nope")).toBeInTheDocument();
+    expect(
+      await screen.findByText(t.adminLoadPropertiesFailed),
+    ).toBeInTheDocument();
   });
 });
 
@@ -170,7 +179,9 @@ describe("AdminUsers", () => {
     inRouter(<AdminUsers />);
 
     expect(await screen.findByText("aaro@test.local")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Reset link" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t.adminResetLink }),
+    );
     expect(
       await screen.findByDisplayValue(/\/reset\/tok-xyz$/),
     ).toBeInTheDocument();
@@ -190,17 +201,19 @@ describe("AdminUsers", () => {
     });
     inRouter(<AdminUsers />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Reset link" }),
+      await screen.findByRole("button", { name: t.adminResetLink }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    await userEvent.click(screen.getByRole("button", { name: t.adminCopy }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
         expect.stringContaining("/reset/tok-xyz"),
       ),
     );
-    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: t.adminCopied }),
+    ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    await userEvent.click(screen.getByRole("button", { name: t.adminDismiss }));
     expect(screen.queryByDisplayValue(/reset/)).not.toBeInTheDocument();
   });
 
@@ -214,7 +227,7 @@ describe("AdminUsers", () => {
     vi.mocked(adminApi.deleteUser).mockResolvedValue({ ok: true });
     inRouter(<AdminUsers />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Delete" }),
+      await screen.findByRole("button", { name: t.delete }),
     );
     await waitFor(() => expect(adminApi.deleteUser).toHaveBeenCalledWith(u.id));
   });
@@ -227,7 +240,7 @@ describe("AdminUsers", () => {
     vi.mocked(adminApi.listUsers).mockResolvedValue([user({})]);
     inRouter(<AdminUsers />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Delete" }),
+      await screen.findByRole("button", { name: t.delete }),
     );
     expect(adminApi.deleteUser).not.toHaveBeenCalled();
   });
@@ -243,9 +256,11 @@ describe("AdminUsers", () => {
     );
     inRouter(<AdminUsers />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Delete" }),
+      await screen.findByRole("button", { name: t.delete }),
     );
-    expect(await screen.findByText("Delete failed")).toBeInTheDocument();
+    expect(
+      await screen.findByText(t.adminDeleteUserFailed),
+    ).toBeInTheDocument();
   });
 
   it("surfaces a reset-link error", async () => {
@@ -255,14 +270,14 @@ describe("AdminUsers", () => {
     );
     inRouter(<AdminUsers />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Reset link" }),
+      await screen.findByRole("button", { name: t.adminResetLink }),
     );
-    expect(await screen.findByText("Reset link failed")).toBeInTheDocument();
+    expect(await screen.findByText(t.adminResetLinkFailed)).toBeInTheDocument();
   });
 
   it("shows the empty state with no users", async () => {
     vi.mocked(adminApi.listUsers).mockResolvedValue([]);
     inRouter(<AdminUsers />);
-    expect(await screen.findByText(/No users yet/)).toBeInTheDocument();
+    expect(await screen.findByText(t.adminNoUsers)).toBeInTheDocument();
   });
 });

@@ -1,7 +1,8 @@
 import { type FormEvent, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { api, ApiCallError } from "../lib/api";
+import { api } from "../lib/api";
 import { Button } from "../components/ui/Button";
+import { t } from "../lib/strings";
 
 export function ResetPassword() {
   const { token = "" } = useParams<{ token: string }>();
@@ -19,9 +20,8 @@ export function ResetPassword() {
       await api.resetPassword({ token, new_password: newPassword });
       setDone(true);
       setTimeout(() => navigate("/login", { replace: true }), 2000);
-    } catch (err) {
-      const msg = err instanceof ApiCallError ? err.message : "Reset failed";
-      setError(msg);
+    } catch {
+      setError(t.resetFailed);
     } finally {
       setSubmitting(false);
     }
@@ -30,13 +30,14 @@ export function ResetPassword() {
   if (done) {
     return (
       <section>
-        <h1 className="text-xl font-semibold mb-2">Password reset</h1>
+        <h1 className="text-xl font-semibold mb-2 font-[family-name:var(--font-display)]">
+          {t.resetDoneTitle}
+        </h1>
         <p className="text-sm">
-          Done. Redirecting to{" "}
+          {t.resetDoneBody}{" "}
           <Link to="/login" className="underline">
-            login
+            {t.login}
           </Link>
-          …
         </p>
       </section>
     );
@@ -44,10 +45,12 @@ export function ResetPassword() {
 
   return (
     <section className="max-w-sm">
-      <h1 className="text-2xl font-semibold mb-4">Set new password</h1>
+      <h1 className="text-3xl font-semibold mb-4 font-[family-name:var(--font-display)]">
+        {t.resetTitle}
+      </h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block">
-          <span className="text-sm text-fg/70">New password (≥10 chars)</span>
+          <span className="text-sm text-fg/70">{t.resetNewPassword}</span>
           <input
             type="password"
             required
@@ -58,9 +61,9 @@ export function ResetPassword() {
             className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
           />
         </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Resetting…" : "Reset password"}
+          {submitting ? t.resetSubmitting : t.resetSubmit}
         </Button>
       </form>
     </section>

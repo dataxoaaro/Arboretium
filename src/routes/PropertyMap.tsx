@@ -12,7 +12,8 @@ import {
   type MapViewHandle,
 } from "../components/map/MapView";
 import { useCurrentProperty } from "../lib/property-context";
-import { api, ApiCallError, type CellSummary, type Plant } from "../lib/api";
+import { api, type CellSummary, type Plant } from "../lib/api";
+import { t } from "../lib/strings";
 import {
   PlantSheet,
   type PlantSheetMode,
@@ -44,10 +45,8 @@ export function PropertyMap() {
         api.listPlants(property.id),
       );
       setPlants(r.data);
-    } catch (err) {
-      setError(
-        err instanceof ApiCallError ? err.message : "Failed to load plants",
-      );
+    } catch {
+      setError(t.mapLoadPlantsFailed);
     }
   }, [property.id]);
 
@@ -169,7 +168,7 @@ export function PropertyMap() {
 
   function handleAddButton(): void {
     if (property.center_lat == null || property.center_lng == null) {
-      setError("This property has no centre yet — tap a cell on the map.");
+      setError(t.mapNoCentre);
       return;
     }
     openCreateAt(
@@ -201,14 +200,12 @@ export function PropertyMap() {
           type="button"
           onClick={handleAddButton}
           className="absolute bottom-5 right-5 z-10 rounded-full w-16 h-16 bg-[var(--color-accent)] text-white text-3xl shadow-lg hover:bg-[var(--color-accent-strong)] inline-flex items-center justify-center"
-          aria-label="Add a plant at the property centre"
+          aria-label={t.mapAddPlant}
         >
           +
         </button>
         <div className="absolute bottom-5 left-5 z-10 bg-[var(--color-surface)]/95 border border-[var(--color-border)] rounded-xl shadow px-3 py-2 text-sm font-medium">
-          {plants === null
-            ? "Loading…"
-            : `${plants.length} plant${plants.length === 1 ? "" : "s"}`}
+          {plants === null ? t.loading : t.mapPlants(plants.length)}
         </div>
       </div>
 

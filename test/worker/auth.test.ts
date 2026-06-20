@@ -51,9 +51,13 @@ describe("POST /auth/register", () => {
     expect(res.status).toBe(400);
   });
 
-  it("rejects a missing display name", async () => {
-    const res = await register({ display_name: "" });
-    expect(res.status).toBe(400);
+  it("defaults the display name to the email when omitted", async () => {
+    const email = `nodisplay-${crypto.randomUUID().slice(0, 8)}@test.local`;
+    const res = await register({ email, display_name: "" });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { display_name: string }).display_name).toBe(
+      email,
+    );
   });
 
   it("rejects a duplicate email with 409", async () => {
