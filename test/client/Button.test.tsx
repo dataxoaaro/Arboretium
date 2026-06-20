@@ -30,7 +30,25 @@ describe("Button", () => {
   it("applies the secondary variant classes", () => {
     render(<Button variant="secondary">Two</Button>);
     expect(screen.getByRole("button", { name: "Two" }).className).toContain(
-      "bg-black/5",
+      "border-[var(--color-border)]",
+    );
+  });
+
+  it("applies the danger variant classes", () => {
+    render(<Button variant="danger">Del</Button>);
+    expect(screen.getByRole("button", { name: "Del" }).className).toContain(
+      "text-[var(--color-danger)]",
+    );
+  });
+
+  it("has a large default tap target and honours size", () => {
+    const { rerender } = render(<Button>Tap</Button>);
+    expect(screen.getByRole("button", { name: "Tap" }).className).toContain(
+      "min-h-12",
+    );
+    rerender(<Button size="lg">Tap</Button>);
+    expect(screen.getByRole("button", { name: "Tap" }).className).toContain(
+      "min-h-14",
     );
   });
 

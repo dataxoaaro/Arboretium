@@ -1,9 +1,26 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Nature design system — see DESIGN.md.
+   Calm, minimal, mobile-first; generous touch targets for older users.
+   Palette is warm "paper" + forest green, with a honey/ochre secondary used
+   for cell notes & photos (annotated hexes).
+   ──────────────────────────────────────────────────────────────────────── */
 @theme {
-  --color-bg: oklch(99% 0 0);
-  --color-fg: oklch(20% 0 0);
-  --color-accent: oklch(58% 0.16 145);
+  --color-bg: oklch(97.8% 0.012 110); /* warm paper */
+  --color-surface: oklch(100% 0 0); /* cards / sheets */
+  --color-fg: oklch(27% 0.03 150); /* bark / forest near-black */
+  --color-muted: oklch(48% 0.02 150); /* secondary text */
+  --color-border: oklch(89% 0.012 130); /* soft hairline */
+  --color-accent: oklch(52% 0.11 150); /* leaf green — primary actions */
+  --color-accent-strong: oklch(45% 0.11 150); /* hover / pressed */
+  --color-amber: oklch(72% 0.12 75); /* honey/ochre — annotated cells */
+  --color-amber-strong: oklch(58% 0.11 70);
+  --color-danger: oklch(52% 0.17 25); /* destructive actions */
+
+  --font-display:
+    "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
+    serif;
 }
 
 html,
@@ -20,6 +37,23 @@ body {
     -apple-system,
     "Segoe UI",
     Roboto,
+    "Helvetica Neue",
+    Arial,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Inputs never below 16px — stops iOS Safari from zooming on focus, and keeps
+   text readable for older eyes. */
+input,
+select,
+textarea {
+  font-size: max(1rem, 16px);
+}
+
+/* Honour the iPhone safe area so the bottom action bars / FAB aren't hidden
+   behind the home indicator. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
