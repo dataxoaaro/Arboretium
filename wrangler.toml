@@ -1,6 +1,6 @@
 # NOTE: must match your Cloudflare Worker name. Your Workers Builds log reported
 # it as "arboritium" — change this if your dashboard shows a different spelling.
-name = "arboritium"
+name = "arboretium"
 main = "worker/index.ts"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
