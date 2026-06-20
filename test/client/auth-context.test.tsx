@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthProvider } from "../../src/lib/auth-context";
 import { useAuth } from "../../src/lib/use-auth";
 import { api, ApiCallError } from "../../src/lib/api";
+import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/lib/api")>();
@@ -23,11 +24,6 @@ function Consumer() {
     </div>
   );
 }
-
-beforeEach(() => {
-  vi.mocked(api.me).mockReset();
-  vi.mocked(api.logout).mockReset();
-});
 
 describe("AuthProvider", () => {
   it("loads the current user on mount", async () => {
@@ -49,7 +45,7 @@ describe("AuthProvider", () => {
   });
 
   it("treats a 401 as anonymous", async () => {
-    vi.mocked(api.me).mockRejectedValue(new ApiCallError("nope", 401));
+    vi.mocked(api.me).mockReturnValue(rejected(new ApiCallError("nope", 401)));
     render(
       <AuthProvider>
         <Consumer />

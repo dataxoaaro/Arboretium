@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Login } from "../../src/routes/Login";
 import { AuthContext, type AuthState } from "../../src/lib/use-auth";
 import { api, ApiCallError } from "../../src/lib/api";
+import { rejected } from "./rejected";
 
 vi.mock("../../src/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/lib/api")>();
@@ -32,10 +33,6 @@ function renderLogin(setUser = vi.fn()) {
   return { setUser };
 }
 
-beforeEach(() => {
-  vi.mocked(api.login).mockReset();
-});
-
 describe("Login", () => {
   it("submits credentials, stores the user, and navigates to /properties", async () => {
     const user = {
@@ -62,8 +59,8 @@ describe("Login", () => {
   });
 
   it("shows the server error message on failure", async () => {
-    vi.mocked(api.login).mockRejectedValue(
-      new ApiCallError("Invalid email or password", 401),
+    vi.mocked(api.login).mockReturnValue(
+      rejected(new ApiCallError("Invalid email or password", 401)),
     );
     renderLogin();
 
