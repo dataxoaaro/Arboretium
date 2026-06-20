@@ -20,7 +20,13 @@ import {
   type BasemapLayer,
   type MapConfig,
 } from "../../lib/api-map";
-import { cellAtPoint, cellRing, RES_FINE, type H3Index } from "../../lib/h3";
+import {
+  cellAtPoint,
+  cellRing,
+  cellCenter,
+  RES_FINE,
+  type H3Index,
+} from "../../lib/h3";
 import { readHexMode, writeHexMode } from "./visibility-mode";
 import { BasemapToggle } from "./BasemapToggle";
 
@@ -37,6 +43,14 @@ const GPS_SOURCE = "arb-gps";
 const MARKER_LAYER = "arb-markers";
 const MARKER_LABEL_LAYER = "arb-markers-label";
 const MARKER_SOURCE = "arb-markers";
+const ANNOTATED_LAYER = "arb-annotated";
+const ANNOTATED_SOURCE = "arb-annotated";
+
+// Map palette — mirrors the DESIGN.md tokens (green = planted, amber = notes/
+// photos only). Kept as literals because the MapLibre style runs outside the
+// CSS cascade.
+const COLOR_PLANTED = "#3f7d44";
+const COLOR_ANNOTATED = "#c98a2b";
 
 export interface MapMarker {
   id: string;
@@ -59,6 +73,8 @@ interface MapViewProps {
   includedHexes?: ReadonlySet<H3Index>;
   /** Subset of includedHexes that already have plants — rendered green. */
   occupiedCells?: ReadonlySet<H3Index>;
+  /** Cells with notes/photos but no plants — rendered amber (ARB-146). */
+  annotatedCells?: ReadonlySet<H3Index>;
   /** Called when the user taps a cell. */
   onCellTap?: (h3: H3Index, point: { lat: number; lng: number }) => void;
   /** Plant markers to render. */
@@ -74,6 +90,7 @@ export function MapView({
   boundary,
   includedHexes,
   occupiedCells,
+  annotatedCells,
   onCellTap,
   markers,
   onMarkerClick,
@@ -157,10 +174,13 @@ export function MapView({
         minzoom: 17,
         paint: {
           "fill-color": [
-            "case",
-            ["get", "occupied"],
-            "rgba(34, 139, 34, 0.30)",
-            "rgba(0, 0, 0, 0.04)",
+            "match",
+            ["get", "state"],
+            "planted",
+            "rgba(63, 125, 68, 0.32)",
+            "annotated",
+            "rgba(201, 138, 43, 0.32)",
+            /* empty */ "rgba(0, 0, 0, 0.04)",
           ],
         },
       });
@@ -171,10 +191,13 @@ export function MapView({
         minzoom: 17,
         paint: {
           "line-color": [
-            "case",
-            ["get", "occupied"],
-            "rgba(34, 139, 34, 0.9)",
-            "rgba(0, 0, 0, 0.35)",
+            "match",
+            ["get", "state"],
+            "planted",
+            "rgba(63, 125, 68, 0.9)",
+            "annotated",
+            "rgba(201, 138, 43, 0.95)",
+            /* empty */ "rgba(0, 0, 0, 0.35)",
           ],
           "line-width": 0.6,
         },
@@ -220,6 +243,24 @@ export function MapView({
         },
       });
 
+      // Annotated cells (notes/photos, no plant): amber dots, drawn beneath
+      // the green plant markers so a planted cell always reads as planted.
+      map.addSource(ANNOTATED_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: ANNOTATED_LAYER,
+        type: "circle",
+        source: ANNOTATED_SOURCE,
+        paint: {
+          "circle-radius": 6,
+          "circle-color": COLOR_ANNOTATED,
+          "circle-stroke-color": "#fff",
+          "circle-stroke-width": 2,
+        },
+      });
+
       map.addSource(MARKER_SOURCE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -230,7 +271,7 @@ export function MapView({
         source: MARKER_SOURCE,
         paint: {
           "circle-radius": 7,
-          "circle-color": "#228b22",
+          "circle-color": COLOR_PLANTED,
           "circle-stroke-color": "#fff",
           "circle-stroke-width": 2,
         },
@@ -347,8 +388,38 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-    drawHexes(map, hexMode, includedHexes, occupiedCells ?? new Set());
-  }, [hexMode, includedHexes, occupiedCells, config]);
+    drawHexes(
+      map,
+      hexMode,
+      includedHexes,
+      occupiedCells ?? new Set(),
+      annotatedCells ?? new Set(),
+    );
+  }, [hexMode, includedHexes, occupiedCells, annotatedCells, config]);
+
+  // Push annotated-cell markers (amber dots at each cell centre).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const src = map.getSource(ANNOTATED_SOURCE) as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (!src) return;
+    const features: GeoJSON.Feature[] = [];
+    for (const h3 of annotatedCells ?? []) {
+      try {
+        const [lng, lat] = cellCenter(h3);
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lng, lat] },
+          properties: { h3 },
+        });
+      } catch {
+        // skip malformed cell ids
+      }
+    }
+    src.setData({ type: "FeatureCollection", features });
+  }, [annotatedCells, config]);
 
   // Push boundary.
   useEffect(() => {
@@ -482,6 +553,7 @@ function drawHexes(
   mode: "off" | "on",
   included: ReadonlySet<H3Index> | undefined,
   occupied: ReadonlySet<H3Index>,
+  annotated: ReadonlySet<H3Index>,
 ): void {
   const src = map.getSource(HEX_SOURCE) as maplibregl.GeoJSONSource | undefined;
   if (!src) return;
@@ -493,10 +565,16 @@ function drawHexes(
 
   const features: GeoJSON.Feature[] = [];
   for (const h3 of included) {
+    // Planted wins over annotated: a cell with a plant always reads as planted.
+    const state = occupied.has(h3)
+      ? "planted"
+      : annotated.has(h3)
+        ? "annotated"
+        : "empty";
     features.push({
       type: "Feature",
       geometry: { type: "Polygon", coordinates: [cellRing(h3)] },
-      properties: { h3, occupied: occupied.has(h3) },
+      properties: { h3, state },
     });
   }
   src.setData({ type: "FeatureCollection", features });
