@@ -1,35 +1,46 @@
-name = "arboretum-worker"
+# NOTE: must match your Cloudflare Worker name. Your Workers Builds log reported
+# it as "arboritium" — change this if your dashboard shows a different spelling.
+name = "arboritium"
 main = "worker/index.ts"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
 
-# --- Bindings (placeholders; real IDs filled in during ARB-E10 deploy) ---
+# One Worker serves the built SPA (./dist) AND the API on a single origin.
+# `/api/*` runs the Worker (which strips the prefix and hands it to Hono);
+# everything else is served from static assets with SPA fallback to index.html.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+# --- Bindings ---
+# For local `wrangler dev` the IDs below are ignored (D1/R2/KV are simulated
+# locally). For deployment you MUST replace the D1 database_id and the KV id
+# with the real IDs you create, and create an R2 bucket with the name below.
+# See claudedocs/deploy-checklist.md.
 
 [[d1_databases]]
 binding = "DB"
-database_name = "arboretum-dev"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_name = "arboritium"
+database_id = "00000000-0000-0000-0000-000000000000" # REPLACE with real D1 id
 migrations_dir = "migrations"
 
 [[r2_buckets]]
 binding = "PHOTOS"
-bucket_name = "arboretum-photos-dev"
+bucket_name = "arboritium-photos" # create this R2 bucket
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "0000000000000000000000000000000000"
+id = "0000000000000000000000000000000000" # REPLACE with real KV namespace id
 
-# --- Vars (non-secret config; secrets use `wrangler secret put`) ---
-
+# Non-secret config. ALLOWED_ORIGIN only matters for cross-origin callers (the
+# Vite dev proxy); in production the SPA and API share one origin, which the
+# origin check always allows. Secrets (SITE_PASSWORD, JWT_SECRET, MML_API_KEY)
+# are set with `wrangler secret put`, never here.
 [vars]
-# SPA dev origin. Admin lives under /admin in the same SPA — no separate origin.
 ALLOWED_ORIGIN = "http://127.0.0.1:5173"
-
-# --- Dev server settings ---
 
 [dev]
 ip = "127.0.0.1"
 port = 8787
-
-# --- Workers excluded from Pages build ---
-# (Pages build only takes `dist/` from the SPA; Worker is deployed separately.)

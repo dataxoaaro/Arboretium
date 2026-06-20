@@ -17,9 +17,13 @@ type Bindings = {
   MML_API_KEY: string;
   ALLOWED_ORIGIN: string;
   LOCAL_ADMIN?: string;
+  /** Static-assets binding — present only in the deployed Worker (see wrangler.toml). */
+  ASSETS?: Fetcher;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+// The Hono API. Exported for the worker tests, which call `app.request(...)`
+// directly. In production the default export below wraps it (assets + /api).
+export const app = new Hono<{ Bindings: Bindings }>();
 
 app.use("*", async (c, next) => {
   return originCheck(c.env.ALLOWED_ORIGIN)(c, next);
@@ -59,4 +63,27 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error" }, 500);
 });
 
-export default app;
+// Production entry: one Worker serves both the SPA and the API on a single
+// origin. `/api/*` is stripped and handed to the Hono app (mirroring the Vite
+// dev proxy); everything else is served from static assets, with SPA fallback
+// to index.html (wrangler.toml `not_found_handling`). In local `wrangler dev`
+// there's no ASSETS binding, so non-API requests fall back to the app.
+export default {
+  async fetch(
+    request: Request,
+    env: Bindings,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+      const innerPath = url.pathname.replace(/^\/api/, "") || "/";
+      const inner = new Request(
+        new URL(innerPath + url.search, url.origin),
+        request,
+      );
+      return app.fetch(inner, env, ctx);
+    }
+    if (env.ASSETS) return env.ASSETS.fetch(request);
+    return app.fetch(request, env, ctx);
+  },
+};

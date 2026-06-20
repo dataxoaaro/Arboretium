@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import app from "../../worker/index";
+import { app } from "../../worker/index";
 import { signJwt } from "../../worker/lib/crypto";
 
 // Shared helpers for worker integration tests. The worker treats h3_res15 as an

@@ -23,7 +23,18 @@ export function originCheck(allowedOrigin: string) {
       // The JWT cookie can't be set without browser cooperation anyway, so
       // this only loosens curl-based testing.
       if (origin && !allowed.has(origin)) {
-        return c.json({ error: "Origin not allowed" }, 403);
+        // Same-origin requests are always allowed: in production the SPA and
+        // API share one origin, so no ALLOWED_ORIGIN config is needed there.
+        // The allowlist only covers extra origins (e.g. the Vite dev proxy).
+        let sameOrigin = false;
+        try {
+          sameOrigin = new URL(c.req.url).origin === origin;
+        } catch {
+          sameOrigin = false;
+        }
+        if (!sameOrigin) {
+          return c.json({ error: "Origin not allowed" }, 403);
+        }
       }
     }
     await next();

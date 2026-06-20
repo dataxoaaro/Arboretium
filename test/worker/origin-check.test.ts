@@ -25,6 +25,16 @@ describe("origin check", () => {
     expect(res.status).toBe(200);
   });
 
+  it("allows a same-origin request even when not in the allowlist (prod case)", async () => {
+    // The app.request URL origin is http://localhost; sending the same Origin
+    // simulates the deployed single-origin case (no ALLOWED_ORIGIN needed).
+    const res = await request("/auth/logout", {
+      method: "POST",
+      headers: { Origin: "http://localhost" },
+    });
+    expect(res.status).toBe(200);
+  });
+
   it("does not block safe methods from a foreign origin", async () => {
     const res = await request("/health", {
       headers: { Origin: "https://evil.example" },

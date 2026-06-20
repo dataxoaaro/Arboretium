@@ -454,6 +454,12 @@ The deployed app lives at a non-discoverable URL — either a long random `*.pag
 
 Everything lives on **Cloudflare's free tier** — there is no platform-pause to worry about (unlike Supabase Free), and R2's free egress means photo bandwidth costs nothing.
 
+> **Implementation note (June 2026):** deployment uses a **single Worker that
+> serves both the SPA (static assets) and the API** on one origin, via
+> Cloudflare Workers Builds (Git integration) — superseding the separate
+> Pages-project plan below. See **ADR-0003** and
+> `claudedocs/deploy-checklist.md`. (Cost is unchanged: €0/mo.)
+
 - **Cloudflare Pages** (free) — hosts the Vite-built static SPA
   - GitHub integration: every push to `main` deploys to production, every PR gets a preview URL
   - Unlimited static requests, 500 builds/month

@@ -76,10 +76,11 @@ export default defineConfig({
     port: 5173,
     host: "127.0.0.1",
     proxy: {
+      // Forward /api/* unchanged; the Worker entry strips the /api prefix, so
+      // dev and production route identically.
       "/api": {
         target: "http://127.0.0.1:8787",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
