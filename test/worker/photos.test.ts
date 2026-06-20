@@ -19,12 +19,13 @@ function imageFile(type = "image/jpeg", bytes = 32): File {
 function upload(
   fields: Record<string, string | File>,
   cookie?: string,
+  envOverride?: Record<string, unknown>,
 ): Promise<Response> {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.set(k, v);
   const headers: Record<string, string> = { Origin: ORIGIN };
   if (cookie) headers.Cookie = cookie;
-  return request("/photos", { method: "POST", body: fd, headers });
+  return request("/photos", { method: "POST", body: fd, headers }, envOverride);
 }
 
 describe("POST /photos", () => {
@@ -142,6 +143,31 @@ describe("POST /photos", () => {
     const outsider = await sessionCookie((await seedUser()).id);
     const res = await upload({ file: imageFile(), plant_id: id }, outsider);
     expect(res.status).toBe(404);
+  });
+
+  it("records the stored byte size", async () => {
+    const { property, cookie } = await seedMemberWithProperty({
+      hexes: ["cell-a"],
+    });
+    const { id: plantId } = await seedPlant(property.id, "cell-a");
+    const res = await upload(
+      { file: imageFile("image/jpeg", 64), plant_id: plantId },
+      cookie,
+    );
+    expect(((await res.json()) as PhotoRow).bytes).toBe(64);
+  });
+
+  it("refuses uploads that would exceed the storage budget (507)", async () => {
+    const { property, cookie } = await seedMemberWithProperty({
+      hexes: ["cell-a"],
+    });
+    const { id: plantId } = await seedPlant(property.id, "cell-a");
+    const res = await upload(
+      { file: imageFile("image/jpeg", 100), plant_id: plantId },
+      cookie,
+      { MAX_PHOTO_BYTES: "10" }, // 100-byte upload vs a 10-byte budget
+    );
+    expect(res.status).toBe(507);
   });
 });
 

@@ -40,6 +40,9 @@ id = "403b184269b742858a14bfc6cd1e20ba"
 # are set with `wrangler secret put`, never here.
 [vars]
 ALLOWED_ORIGIN = "http://127.0.0.1:5173"
+# Cost guardrail: the Worker refuses photo uploads once total stored bytes would
+# cross this, so R2 never exceeds the 10 GB free tier. Lower it to be stricter.
+MAX_PHOTO_BYTES = "9000000000" # ~9 GB
 
 [dev]
 ip = "127.0.0.1"

@@ -67,6 +67,7 @@ export interface Photo {
   taken_at: number | null;
   uploaded_at: number;
   uploaded_by: string;
+  bytes: number;
 }
 
 /** A hex cell that carries notes and/or photos (map overlay summary). */

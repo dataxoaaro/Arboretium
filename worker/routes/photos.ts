@@ -22,11 +22,16 @@ type Bindings = {
   DB: D1Database;
   PHOTOS: R2Bucket;
   JWT_SECRET: string;
+  /** Total R2 storage budget in bytes (overrides the default). */
+  MAX_PHOTO_BYTES?: string;
 };
 
 export const photoRoutes = new Hono<{ Bindings: Bindings }>();
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB; the SPA resizes to ≤2048 px so well under this.
+// Cost guardrail: refuse uploads once total stored bytes would cross this, so
+// we never exceed R2's 10 GB free tier. Override with MAX_PHOTO_BYTES.
+const DEFAULT_MAX_TOTAL_BYTES = 9_000_000_000; // ~9 GB
 const ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/jpg",
@@ -166,6 +171,18 @@ photoRoutes.post("/", async (c) => {
     }
   }
 
+  // Cost guardrail: never let total R2 usage cross the free-tier budget.
+  const maxTotal = Number(c.env.MAX_PHOTO_BYTES) || DEFAULT_MAX_TOTAL_BYTES;
+  const usage = await c.env.DB.prepare(
+    "SELECT COALESCE(SUM(bytes), 0) AS total FROM photos",
+  ).first<{ total: number }>();
+  if ((usage?.total ?? 0) + file.size > maxTotal) {
+    return c.json(
+      { error: "Photo storage is full. Delete some photos to free space." },
+      507,
+    );
+  }
+
   const id = crypto.randomUUID();
   const ext = mimeToExt(file.type);
   const r2Key = hasPlant
@@ -180,8 +197,8 @@ photoRoutes.post("/", async (c) => {
   const t = now();
   await c.env.DB.prepare(
     `INSERT INTO photos
-       (id, plant_id, cell_property_id, cell_h3_res15, r2_key, caption, taken_at, uploaded_at, uploaded_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, plant_id, cell_property_id, cell_h3_res15, r2_key, caption, taken_at, uploaded_at, uploaded_by, bytes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -193,6 +210,7 @@ photoRoutes.post("/", async (c) => {
       takenAt,
       t,
       session.sub,
+      file.size,
     )
     .run();
 

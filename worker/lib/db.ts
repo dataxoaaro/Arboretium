@@ -70,6 +70,8 @@ export interface PhotoRow {
   taken_at: UnixMs | null;
   uploaded_at: UnixMs;
   uploaded_by: string;
+  /** Stored byte size — summed to enforce the R2 storage budget. */
+  bytes: number;
 }
 
 export interface PasswordResetTokenRow {
