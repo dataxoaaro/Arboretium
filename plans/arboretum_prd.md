@@ -1,8 +1,14 @@
 # Arboretum Mapper — Product Requirements Document
 
-**Version:** 0.3
+**Version:** 0.4
 **Author:** Personal project
-**Last updated:** May 2026
+**Last updated:** June 2026
+
+> v0.4 reconciles the spec with the implemented design (E0–E7): site-password
+> auth (no magic links / email invites), admin pages folded into the SPA and
+> gated by `LOCAL_ADMIN` (no standalone tool / Cloudflare HTTP API), and
+> Worker-proxied photo uploads (no signed URLs). See `plans/TODO.md` for the
+> per-epic status and `docs/adr/` for recorded decisions.
 
 ---
 
@@ -81,7 +87,7 @@ A hex cell can contain:
 
 A property boundary is **required** — it scopes the H3 grid, the map view, and the offline cache.
 
-**Property creation, editing, and archiving are admin-only and happen via a local admin tool, not from the deployed web UI** (see §8.10). This is intentional: it removes the single biggest data-exposure risk (any registered user creating a property over someone else's hexes and reading their data via spatial lookup). The deployed app's web UI never exposes "Create property" or "Edit boundary" to anyone.
+**Property creation, editing, and archiving are admin-only and happen via the `LOCAL_ADMIN`-gated admin pages, not from the deployed web UI** (see §8.9). This is intentional: it removes the single biggest data-exposure risk (any registered user creating a property over someone else's hexes and reading their data via spatial lookup). The deployed app's web UI never exposes "Create property" or "Edit boundary" to anyone.
 
 The admin tool runs locally on the owner's laptop and walks the admin through:
 
@@ -93,7 +99,7 @@ The admin tool runs locally on the owner's laptop and walks the admin through:
    - **Entering coordinates** directly (center + radius, or bounding box) as a quick alternative
 4. Assign an owner (any registered user, by email)
 5. Optionally add initial members
-6. Submit — the tool inserts/updates the rows directly in the production D1 database and seeds R2 if needed
+6. Submit — the `LOCAL_ADMIN`-gated admin endpoints write the rows to D1 (the local SQLite file in dev; the production DB once deployed)
 
 The web UI shows the property picker (one's own active properties), and once a property is selected, the map view, list view, plant detail, etc. — but never the create/edit/archive flow.
 
@@ -214,7 +220,7 @@ Designed for ~5 users total. Registration is gated by a single **site password**
 
 - Anyone who knows the site password can register their own account (email + personal password + display name)
 - A registered user with no property memberships sees an empty property picker — registration alone grants no access to any data
-- The **admin** uses the local admin tool (§8.10) to assign registered users as members or owners of specific properties
+- The **admin** uses the `LOCAL_ADMIN`-gated admin pages (§8.9) to assign registered users as members or owners of specific properties
 - Property members have full edit rights (add, edit, delete plants, cell notes, photos) on properties they belong to
 - Each plant, cell note, and photo records `created_by` and `last_edited_by` for accountability
 - A property has exactly one owner; ownership transfers happen via the admin tool
@@ -259,7 +265,7 @@ Designed for ~5 users total. Registration is gated by a single **site password**
 | Database           | Cloudflare D1 (managed SQLite)                                                                                                                          |
 | Object storage     | Cloudflare R2 (photos, free egress)                                                                                                                     |
 | Rate limiting      | Cloudflare KV (per-IP and per-email login/registration limits)                                                                                          |
-| Admin tool         | Local-only Vite app + Node helpers, talks to production via Cloudflare API                                                                              |
+| Admin tool         | Admin pages bundled in the SPA under `/admin/*`, gated by the `LOCAL_ADMIN` Worker env var (endpoints 404 in production)                                |
 | Auth               | Email + password (PBKDF2 via Web Crypto), signed JWT in HTTP-only cookie. Site password gates self-registration; admin manages everything else locally. |
 | Offline            | vite-plugin-pwa (Workbox-based service worker)                                                                                                          |
 | Photo processing   | Client-side canvas resize (drops EXIF on re-encode) + exifr (read `taken_at` before resize)                                                             |
@@ -292,24 +298,25 @@ The shadcn list is intentionally trim. `Command`, `Calendar`, `Avatar`, `Skeleto
 
 ### 8.3 Backend (Cloudflare Workers + D1 + R2)
 
-A single Cloudflare Worker exposes a small REST API (~100 lines, built on Hono). The deployed Worker has **no admin endpoints** — property and user management run only via the local admin tool talking directly to D1/R2 over the Cloudflare API (§8.10):
+A single Cloudflare Worker exposes a small REST API (built on Hono). Admin endpoints (`/admin/*`) **exist in the Worker but are gated by the `LOCAL_ADMIN` env var** — it is set only in local dev, so every `/admin/*` call returns 404 in production (§8.9). The public surface:
 
 - **`POST /auth/register`** — requires `site_password` field matching the `SITE_PASSWORD` Worker secret, plus email + personal password + display name; creates the user. Rate-limited per IP.
 - **`POST /auth/login`** — verifies email + password, sets a signed JWT cookie. Rate-limited per email and per IP.
 - **`POST /auth/logout`** — clears the cookie
+- **`GET /auth/me`** — returns the current user (clears the cookie + 401 if the user no longer exists)
 - **`POST /auth/change-password`** — authenticated user changes their own password
 - **`POST /auth/reset/:token`** — redeems an admin-issued one-time reset link
-- **`GET /properties`** — lists the current user's active (non-archived) properties; no create / edit / archive endpoints exist
+- **`GET /properties` / `GET /properties/:id`** — lists / fetches the current user's active (non-archived) properties; no create / edit / archive endpoints on the public surface
 - **`GET / POST / PATCH / DELETE /plants[...]`** — CRUD on plants the user has access to
-- **`GET / POST / PATCH / DELETE /cells[...]`** — cell notes
-- **`POST /photos/upload-url`** — issues a short-lived signed URL for direct R2 upload
-- **`POST /photos`** — registers a successfully-uploaded photo's metadata in D1
+- **`GET /map/config`** — auth-checked MapLibre raster source (MML if a key is set, else OSM/Esri)
+- **`POST /photos`** — multipart upload: the Worker writes the bytes to R2 and registers metadata in one round-trip (local-first; a signed-URL direct upload can swap in at the production cutover without touching the SPA)
+- **`GET /photos?plant_id=…`** — a plant's photo timeline; **`PATCH /photos/:id`** recaptions; **`DELETE /photos/:id`** removes the row + R2 object
 - **`GET /photos/:id`** — auth-checked, streams the photo bytes from R2 through the Worker (private; no public R2 bucket)
-- **`GET /export/:propertyId`** — streams a ZIP of plants + photos + metadata
+- _Planned:_ `GET / POST / PATCH / DELETE /cells[...]` (cell notes, E8) and `GET /export/:propertyId` (ZIP export, E11) — not yet implemented.
 
 **D1 (managed SQLite)** holds all relational data — see schema in §8.4. Authorization is enforced inside each handler: the JWT identifies the user, and every handler checks property membership before touching data. Map view queries use **spatial-first lookup** (see §6.1): `WHERE h3_res15 IN (selected_property.included_hexes)` rather than `WHERE plants.property_id = ?`, which is what lets archived-property data resurface under a new property covering the same hexes.
 
-**R2** holds resized photos. Uploads go directly from the browser to R2 via a signed URL, so photo bytes never pass through the Worker (no CPU-time or memory pressure). Egress from R2 is free, so serving photos to family members costs nothing.
+**R2** holds resized photos. In the local-first design the bytes are POSTed to the Worker, which writes them to R2 (`wrangler dev`'s simulated R2 doesn't model signed-URL PUTs the way production does). The auth-checked `GET /photos/:id` streams them back; the bucket is never public. R2 egress is free, so serving photos to family members costs nothing.
 
 Realtime collaboration is out of scope for v1.
 
@@ -384,7 +391,7 @@ Indexes: `plants(h3_res15)` (drives spatial-first lookup), `plants(property_id, 
 
 ### 8.7 Authentication
 
-The simplest auth that works for ~5 users: a single shared **site password** gates self-registration; once registered, each user has a normal email + password account. **No email is sent** — no magic links, no password-reset emails, no SMTP integration. Property and member management is admin-only and lives in the local tool (§8.10), not on the public Worker.
+The simplest auth that works for ~5 users: a single shared **site password** gates self-registration; once registered, each user has a normal email + password account. **No email is sent** — no magic links, no password-reset emails, no SMTP integration. Property and member management is admin-only, via the `LOCAL_ADMIN`-gated admin pages (§8.9); those endpoints return 404 in production.
 
 **Site password (registration gate)**
 
@@ -458,40 +465,44 @@ Everything lives on **Cloudflare's free tier** — there is no platform-pause to
 - **Cloudflare KV** (free) — small namespace for rate-limit counters; ~1k writes/day free is plenty for ~5 users
 - **Domain**: deployed to a long random `*.pages.dev` subdomain (e.g., `arboretum-x9a2b3c4d5.pages.dev`) for URL-obfuscation; the subdomain is shared only with family members alongside the site password. Optional custom domain (~€10/year) if a friendlier URL is wanted; Cloudflare DNS is free
 - **Worker secrets** (`SITE_PASSWORD`, `JWT_SECRET`, MML API key) managed via `wrangler secret put <NAME>` — never in the repo
-- **Admin token** (`CLOUDFLARE_API_TOKEN` for the admin tool) lives only in `admin/.env.local` on the admin's laptop, never deployed
+- **Admin access** is the `LOCAL_ADMIN` env var, set only in the local `.dev.vars`; production never sets it, so `/admin/*` returns 404. No Cloudflare API token is needed.
 
 ### 8.9 Local admin tool
 
-Property creation/editing/archiving and user/member management are **not** exposed on the deployed app. They run only in a small **local-only tool** that the admin runs on their own laptop. This is the single most important safety property of the design: the public Worker has no way to create properties, no way to add or remove members, and no way to grant access to anyone — so a leaked site password gives an attacker an account but no data.
+> **Implementation note (May 2026):** the original design ran the admin tool as a
+> standalone Vite app on `:3001` that talked to the Cloudflare HTTP API directly.
+> That was replaced by admin pages folded into the SPA (`src/admin/*`, mounted at
+> `/admin/*`) calling Worker endpoints gated by `LOCAL_ADMIN`. The sections below
+> describe the implemented design.
+
+Property creation/editing/archiving and user/member management are **not usable on the deployed app**. The admin pages ship in the production bundle, but every `/admin/*` Worker endpoint returns 404 unless the `LOCAL_ADMIN` env var is `"true"` — and it is set only in the local `.dev.vars`, never in production. So the deployed app exposes the admin UI shell but no working admin API: a leaked site password gives an attacker an account but no data and no way to grant access.
 
 **What it does**
 
-- Add / edit / archive properties (with the same map + polygon + hex-picker UX as the original web admin page)
-- Assign property owner and members
-- Add / disable / remove user accounts
+- Add / edit / archive / restore properties (map + polygon + hex-picker UX via `AdminMap`)
+- Assign property owner and members (add by email / remove)
+- List / hard-delete user accounts
 - Generate one-time password-reset links to share manually
-- Inspect the database (read-only views: who's logged in recently, properties, members)
-- Backup: dump D1 → SQLite file + sync R2 photos to a local folder
+- Inspect DB stats (counts of users, properties, plants, photos)
+- Backup: dump D1 → SQL file + copy local R2 state to a folder (CLI, see below)
 
 **How it's built**
 
-- Lives in `admin/` in the same monorepo, never deployed
-- `pnpm admin` boots a small local Vite app on `http://localhost:3001` that reuses MapLibre + h3 components from the main app
-- Uses the **Cloudflare HTTP API** (D1 query API + R2 S3-compat) — not the deployed Worker — so admin actions bypass the public surface entirely
-- Auth = a Cloudflare API token with D1 + R2 + Workers KV scopes, stored in `admin/.env.local` (gitignored)
+- Lives in `src/admin/*` in the SPA; mounted under `/admin/*` in the React Router config — no separate process, port, or origin
+- Calls the Worker's `/admin/*` endpoints (`src/admin/admin-api.ts`), which are gated by `LOCAL_ADMIN` (`worker/routes/admin.ts`)
+- Runs entirely on `wrangler dev` + `vite` — no Cloudflare account or API token needed for day-to-day admin work
 
 **How it stays safe**
 
-- **Never deployed** — `admin/` is excluded from the Pages build (`.cloudflare/pages-ignore` + a `wrangler.toml` whitelist)
-- **No public endpoint** — there is literally no URL on the deployed site that does these operations
-- **Local network only** — the dev server binds to `127.0.0.1`, not `0.0.0.0`
-- **Admin auth = Cloudflare account** — losing the API token requires losing the laptop; rotating is `wrangler` + Cloudflare dashboard
+- **Single gate** — `LOCAL_ADMIN` is the one source of access control; unset in production = `/admin/*` returns 404. The SPA admin pages render but their API calls fail.
+- **No prod admin path** — production must never set `LOCAL_ADMIN`; there is no other way to reach the admin operations.
+- **Local dev binds to `127.0.0.1`** — not exposed on the network during development.
 
-**Backup story (folded into the same tool)**
+**Backup story (separate CLI)**
 
-- `pnpm admin:backup` dumps the D1 database to a timestamped SQLite file and pulls all R2 photos into a local folder
+- `pnpm admin:backup` (`scripts/backup.mjs`) dumps the D1 database to a timestamped SQL file and copies the local R2 state directory into `backups/<timestamp>/`
 - Run before any risky operation (boundary changes, archives) and on a regular schedule
-- This addresses the lack of automatic point-in-time recovery on D1 free tier
+- This addresses the lack of automatic point-in-time recovery on D1 free tier. The Backups admin page shows current DB stats and the command to run.
 
 ### 8.10 Local development
 
@@ -509,72 +520,55 @@ pnpm wrangler dev # Workers + local D1 (SQLite file) + local R2 emulation on :87
 
 This keeps the inner-loop fast and means the cloud is only touched when actually deploying.
 
-### 8.11 Folder structure (sketch)
+### 8.11 Folder structure (as built)
 
 ```
 src/                          -- Vite SPA frontend (deployed)
-  main.tsx                    -- app entry, router setup
-  App.tsx                     -- top-level shell, auth gate
+  main.tsx                    -- app entry
+  App.tsx                     -- router: public + protected + admin routes
   routes/
-    login.tsx
-    invite.tsx                -- /invite/:token redemption form
-    properties.tsx            -- property picker (default after login)
-    properties.$id.map.tsx    -- map view (primary screen)
-    properties.$id.list.tsx   -- list / search
-    properties.$id.plants.$plantId.tsx
-    properties.$id.cells.$h3.tsx
-    properties.$id.admin.tsx  -- boundary/hex picker, settings, family
-    new-property.tsx
+    Home.tsx Login.tsx Register.tsx ResetPassword.tsx
+    Properties.tsx            -- property picker (default after login)
+    PropertyLayout.tsx        -- /properties/:propertyId shell (membership check)
+    PropertyMap.tsx           -- map view (primary screen)
+    PropertyPlants.tsx        -- list / search
+    Settings.tsx              -- change password / sign out
+  admin/                      -- /admin/* pages (gated by LOCAL_ADMIN worker env)
+    AdminLayout.tsx AdminProperties.tsx AdminPropertyForm.tsx
+    AdminUsers.tsx AdminBackups.tsx AdminMap.tsx
+    admin-api.ts admin-types.ts
   components/
-    ui/                       -- shadcn components (copied)
-    map/                      -- MapLibre wrappers, hex layer
-    plants/
-    forms/
+    ui/Button.tsx
+    map/                      -- MapView, BasemapToggle, visibility-mode
+    plants/PlantSheet.tsx     -- add / edit / info + photo timeline
+    AuthGuard.tsx PropertySwitcher.tsx PropertyTabs.tsx
   lib/
-    api.ts                    -- typed fetch wrappers for the Worker API
-    h3/                       -- H3 utilities
-    db/                       -- Dexie schema, migrations, queries
+    api.ts api-map.ts         -- typed fetch wrappers for the Worker API
+    auth-context.tsx use-auth.ts property-context.tsx
+    h3.ts                     -- H3 utilities (h3-js wrapper)
     photos.ts                 -- canvas resize + exifr read
-    auth.ts                   -- client-side auth helpers
-  store/
-    index.ts                  -- Zustand store
   index.css                   -- Tailwind entry
 
-worker/                       -- Cloudflare Worker (API)
-  index.ts                    -- Hono app, route registration
-  routes/
-    auth.ts
-    invitations.ts
-    properties.ts
-    plants.ts
-    cells.ts
-    photos.ts
-    export.ts
-  lib/
-    db.ts                     -- D1 query helpers
-    r2.ts                     -- R2 signed-URL helpers
-    auth.ts                   -- JWT sign/verify, PBKDF2 hashing
-    schema.ts                 -- zod schemas shared with frontend (via aliased import)
+worker/                       -- Cloudflare Worker (API, Hono)
+  index.ts                    -- route registration + origin check + 404
+  routes/  auth.ts map.ts admin.ts properties.ts plants.ts photos.ts
+  lib/     auth.ts crypto.ts db.ts origin-check.ts rate-limit.ts
 
-migrations/                   -- D1 SQL migration files (numbered)
+migrations/                   -- D1 SQL migration files (0001..0007)
+scripts/                      -- backup.mjs, seed-dev.mjs
+test/                         -- worker/ (vitest-pool-workers) + client/ (jsdom)
+docs/adr/                     -- architecture decision records
+public/                       -- (PWA manifest + icons land here in E9)
+```
 
-admin/                        -- LOCAL-ONLY admin tool (never deployed)
-  vite.config.ts              -- binds to 127.0.0.1:3001 only
-  src/
-    routes/
-      properties.tsx          -- create / edit / archive
-      users.tsx               -- add / disable / reset passwords
-      backup.tsx              -- D1 dump + R2 photo sync
-    lib/
-      cloudflare-api.ts       -- D1 + R2 HTTP API client
-  .env.local                  -- CLOUDFLARE_API_TOKEN, ACCOUNT_ID, etc. (gitignored)
+Not yet present (planned epics): `lib/db/` Dexie cache + PWA manifest (E9),
+`worker/routes/cells.ts` (E8), `worker/routes/export.ts` (E11). Zustand, Dexie,
+and zod from the §8.1 stack table are not yet installed — cross-screen state
+currently uses React context, and validation is hand-rolled server-side.
 
-public/
-  manifest.webmanifest
-  icons/
+vite.config.ts -- includes vite-plugin-pwa, Tailwind, dev proxy to :8787
+wrangler.toml -- Worker + D1 + R2 + KV bindings; excludes admin/
 
-vite.config.ts                -- includes vite-plugin-pwa, Tailwind, dev proxy to :8787
-wrangler.toml                 -- Worker + D1 + R2 + KV bindings; excludes admin/
 ```
 
 ## 9. Data privacy & safety
@@ -584,7 +578,7 @@ The threat model is "small family hobby app" — not a high-value target — but
 **Identity & access**
 
 - Authorization checked in every API handler: users only see active (non-archived) properties they're members of
-- Admin operations (create / edit / archive properties, manage users) live only in the local admin tool — they have **no public endpoint** on the deployed Worker. A leaked site password gives an attacker a useless empty account, not a way in.
+- Admin operations (create / edit / archive properties, manage users) live behind the `LOCAL_ADMIN` gate and return 404 in production, so they have **no working endpoint** on the deployed Worker. A leaked site password gives an attacker a useless empty account, not a way in.
 - Spatial-first lookup is bounded by admin-controlled property creation, so it cannot be weaponized to surface other users' data
 - Passwords hashed with PBKDF2-SHA256 (Web Crypto, 600k iterations, per-user salt); minimum 10 characters
 - Generic "invalid email or password" errors prevent account enumeration; constant-time hash comparison even when the user doesn't exist
@@ -641,7 +635,7 @@ For one user with one or two small properties (Stack: Cloudflare Pages + Workers
 
 - Site-password self-registration + email/password login (no email infrastructure)
 - KV-backed rate limits on login and registration
-- Local admin tool for property creation/editing/archiving and user/member management (never deployed; uses Cloudflare HTTP API)
+- Admin pages (SPA `/admin/*`) for property creation/editing/archiving and user/member management, gated by `LOCAL_ADMIN` (endpoints 404 in production)
 - Spatial-first lookup: data at hex cells of an archived property resurfaces when the admin creates a new property over the same hexes
 - Local backup of D1 + R2 from the admin tool
 - Map with satellite imagery and H3 grid overlay (3 visibility modes: Off / Occupied only / Full)
@@ -651,8 +645,8 @@ For one user with one or two small properties (Stack: Cloudflare Pages + Workers
 - Photo timeline per plant
 - List view and search
 - Mobile-first PWA, installable
-- Magic link auth
-- Family access (invite by email, full edit rights)
+- Site-password self-registration + email/password login (no email infrastructure)
+- Family access via admin-assigned membership (full edit rights; no email invites)
 - Offline read
 
 ### v1.1
@@ -687,7 +681,7 @@ Resolved during PRD review:
 - **Map tiles** — MML WMTS only (Finland-only use case). Mapbox dropped. See §8.5.
 - **Stack** — Vite SPA + Cloudflare Pages + Workers + D1 + R2 + KV. Free, no platform-pause, fully runnable locally with `wrangler dev`. See §8.
 - **Authentication** — single shared site password gates self-registration; email + password login afterwards; no email infrastructure. See §8.7.
-- **Admin model** — property and user/member management is admin-only and runs in a local-only tool that talks to Cloudflare HTTP APIs; no admin endpoints exist on the deployed Worker. See §8.9.
+- **Admin model** — property and user/member management is admin-only, implemented as SPA `/admin/*` pages calling Worker endpoints gated by `LOCAL_ADMIN`; those endpoints 404 in production. (Superseded the original standalone-tool-via-Cloudflare-HTTP-API design.) See §8.9.
 - **Rate limiting** — KV-backed per-email and per-IP limits on login and registration. See §8.7.
 - **Photo serving** — private R2 bucket, served through an auth-checked Worker endpoint. See §8.7, §9.
 - **JWT revocation** — explicitly out of scope for v1; acceptable for a hobby app. Sessions expire after 30 days; password change does not invalidate older sessions. See §9.
@@ -709,3 +703,4 @@ Resolved during PRD review:
 - **Wrangler**: The Cloudflare CLI for running Workers locally (`wrangler dev`) and deploying (`wrangler deploy`)
 - **JWT**: JSON Web Token, a signed and base64-encoded payload used here for stateless session cookies
 - **PBKDF2**: A password-hashing function provided by the Web Crypto API; used here with SHA-256 and 600k iterations
+```
