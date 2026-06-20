@@ -12,7 +12,9 @@ Implementation plan for the v1.0 MVP defined in [`arboretum_prd.md`](./arboretum
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 
-**Current focus:** `ARB-E8` Cell notes & cell photos (E3..E7 done).
+**Current focus:** `ARB-E9` PWA & offline read (E3..E8 done). A test harness
+(Vitest, ~90% coverage, CI-gated) and a nature design system (DESIGN.md —
+mobile-first, large touch targets) are in place.
 
 ---
 
@@ -178,13 +180,13 @@ Hex-level metadata: notes that describe the location, photos of the spot itself.
 
 Depends on: `ARB-E6`, `ARB-E7`.
 
-- [ ] **ARB-140** — `POST /cells` / `PATCH /cells/:property_id/:h3` for notes; create-on-write semantics. (§8.3)
-- [ ] **ARB-141** — `GET /cells/:property_id/:h3` — returns notes + plants + cell photos for a hex. (§6.6, §8.3)
-- [ ] **ARB-142** — Cell detail sheet (mobile drawer / desktop modal). (§6.6)
-- [ ] **ARB-143** — Cell-level photo upload (reuses ARB-122 with cell-target params). (§6.7)
-- [ ] **ARB-144** — Cell-level note edit (free text). (§6.6)
-- [ ] **ARB-145** — Cell metadata block (h3 index, parent res 14/13/12, lat/lng). (§6.6)
-- [ ] **ARB-146** — Distinct map marker for "cell has photos / notes but no plants". (§6.2)
+- [x] **ARB-140** — Cell notes via `PUT /cells/:propertyId/:h3` (upsert / create-on-write). Plus `GET /cells?property_id=…` for the map overlay. (§8.3)
+- [x] **ARB-141** — `GET /cells/:propertyId/:h3` — returns notes + plants + cell photos for a hex (spatial-first). (§6.6, §8.3)
+- [x] **ARB-142** — Cell detail sheet (`CellSheet`, mobile bottom sheet). (§6.6)
+- [x] **ARB-143** — Cell-level photo upload (reuses `POST /photos` with cell-target params). (§6.7)
+- [x] **ARB-144** — Cell-level note edit (free text). (§6.6)
+- [x] **ARB-145** — Cell metadata block (h3 index, parent res 14/13/12, centre lat/lng). (§6.6)
+- [x] **ARB-146** — Distinct amber map marker + hex colour for "cell has photos / notes but no plants". (§6.2)
 
 ---
 
