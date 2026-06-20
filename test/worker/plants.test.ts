@@ -275,6 +275,38 @@ describe("PATCH /plants/:id", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a non-numeric lat or lng", async () => {
+    const { property, cookie } = await seedMemberWithProperty({
+      hexes: ["cell-a"],
+    });
+    const { id } = await seedPlant(property.id, "cell-a");
+    expect(
+      (await jsonRequest(`/plants/${id}`, "PATCH", { lat: "x" }, { cookie }))
+        .status,
+    ).toBe(400);
+    expect(
+      (await jsonRequest(`/plants/${id}`, "PATCH", { lng: "y" }, { cookie }))
+        .status,
+    ).toBe(400);
+  });
+
+  it("updates lat/lng when valid numbers are provided", async () => {
+    const { property, cookie } = await seedMemberWithProperty({
+      hexes: ["cell-a"],
+    });
+    const { id } = await seedPlant(property.id, "cell-a");
+    const res = await jsonRequest(
+      `/plants/${id}`,
+      "PATCH",
+      { lat: 61.5, lng: 25.5 },
+      { cookie },
+    );
+    expect(res.status).toBe(200);
+    const row = (await res.json()) as PlantRow;
+    expect(row.lat).toBe(61.5);
+    expect(row.lng).toBe(25.5);
+  });
+
   it("404s when the user does not own the plant", async () => {
     const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");

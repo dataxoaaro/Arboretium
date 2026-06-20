@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
-import { jsonRequest, getRequest } from "./helpers";
+import { jsonRequest, getRequest, sessionCookie } from "./helpers";
 import { generateResetToken } from "../../worker/routes/auth";
 import { sha256Hex } from "../../worker/lib/crypto";
 
@@ -133,6 +133,12 @@ describe("GET /auth/me", () => {
 
   it("returns 401 without a cookie", async () => {
     const res = await getRequest("/auth/me");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when the session points at a deleted user", async () => {
+    const cookie = await sessionCookie("ghost-user-id");
+    const res = await getRequest("/auth/me", cookie);
     expect(res.status).toBe(401);
   });
 });

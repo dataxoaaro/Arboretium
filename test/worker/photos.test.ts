@@ -231,6 +231,27 @@ describe("PATCH /photos/:id", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it("clears the caption when patched with a non-string value", async () => {
+    const { property, cookie } = await seedMemberWithProperty({
+      hexes: ["cell-a"],
+    });
+    const { id: plantId } = await seedPlant(property.id, "cell-a");
+    const photo = (await (
+      await upload(
+        { file: imageFile(), plant_id: plantId, caption: "had one" },
+        cookie,
+      )
+    ).json()) as PhotoRow;
+    const res = await jsonRequest(
+      `/photos/${photo.id}`,
+      "PATCH",
+      { caption: 123 },
+      { cookie },
+    );
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as PhotoRow).caption).toBeNull();
+  });
 });
 
 describe("DELETE /photos/:id", () => {
