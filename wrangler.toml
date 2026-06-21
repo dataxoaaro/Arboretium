@@ -1,6 +1,8 @@
-# NOTE: must match your Cloudflare Worker name. Your Workers Builds log reported
-# it as "arboritium" — change this if your dashboard shows a different spelling.
-name = "arboritium"
+# Must match the live Cloudflare Worker name. The deployed site is served by
+# "arboretium" (https://arboretium.tikutakuminni.workers.dev). A previous typo
+# ("arboritium") created a stray second worker; all wrangler commands — including
+# `wrangler secret put` — must target this name to hit the live worker.
+name = "arboretium"
 main = "worker/index.ts"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
