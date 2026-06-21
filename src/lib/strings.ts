@@ -43,7 +43,7 @@ export const t = {
   registerTitle: "Luo tili",
   registerIntro:
     "Kysy sivuston salasana ylläpitäjältä, jos sinulla ei ole sitä.",
-  passwordWithRule: "Salasana (vähintään 10 merkkiä)",
+  passwordWithRule: "Salasana (vähintään 5 merkkiä)",
   sitePassword: "Sivuston salasana",
   registerSubmit: "Luo tili",
   registerSubmitting: "Luodaan tiliä…",
@@ -53,7 +53,7 @@ export const t = {
 
   // reset password
   resetTitle: "Aseta uusi salasana",
-  resetNewPassword: "Uusi salasana (vähintään 10 merkkiä)",
+  resetNewPassword: "Uusi salasana (vähintään 5 merkkiä)",
   resetSubmit: "Vaihda salasana",
   resetSubmitting: "Vaihdetaan…",
   resetDoneTitle: "Salasana vaihdettu",
@@ -66,7 +66,7 @@ export const t = {
   settingsSignedInAs: "Kirjautunut käyttäjänä",
   settingsChangePassword: "Vaihda salasana",
   settingsCurrentPassword: "Nykyinen salasana",
-  settingsNewPassword: "Uusi salasana (vähintään 10 merkkiä)",
+  settingsNewPassword: "Uusi salasana (vähintään 5 merkkiä)",
   settingsUpdate: "Päivitä salasana",
   settingsUpdated: "Salasana päivitetty.",
   settingsSession: "Istunto",

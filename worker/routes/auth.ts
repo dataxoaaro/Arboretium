@@ -23,7 +23,7 @@ type Bindings = {
   JWT_SECRET: string;
 };
 
-const MIN_PASSWORD_LENGTH = 10;
+const MIN_PASSWORD_LENGTH = 5;
 const RESET_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const GENERIC_AUTH_ERROR = "Invalid email or password";
 

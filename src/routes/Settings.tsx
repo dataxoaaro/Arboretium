@@ -67,7 +67,7 @@ export function Settings() {
             <input
               type="password"
               required
-              minLength={10}
+              minLength={5}
               autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}

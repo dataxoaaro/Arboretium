@@ -41,8 +41,8 @@ describe("POST /auth/register", () => {
     expect(res.status).toBe(403);
   });
 
-  it("rejects a password shorter than 10 chars", async () => {
-    const res = await register({ password: "short" });
+  it("rejects a password shorter than 5 chars", async () => {
+    const res = await register({ password: "abc" });
     expect(res.status).toBe(400);
   });
 
@@ -202,7 +202,7 @@ describe("POST /auth/change-password", () => {
     const res = await jsonRequest(
       "/auth/change-password",
       "POST",
-      { current_password: "original-password", new_password: "short" },
+      { current_password: "original-password", new_password: "abc" },
       { cookie: cookieFrom(reg) },
     );
     expect(res.status).toBe(400);
@@ -271,7 +271,7 @@ describe("POST /auth/reset/:token", () => {
 
   it("rejects a too-short new password before looking up the token", async () => {
     const res = await jsonRequest(`/auth/reset/whatever`, "POST", {
-      new_password: "short",
+      new_password: "abc",
     });
     expect(res.status).toBe(400);
   });

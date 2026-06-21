@@ -56,7 +56,7 @@ export function Register() {
           <input
             type="password"
             required
-            minLength={10}
+            minLength={5}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
