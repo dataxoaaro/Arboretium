@@ -1,77 +1,87 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
 import {
-  request,
   getRequest,
   jsonRequest,
   seedUser,
   seedProperty,
+  sessionCookie,
 } from "./helpers";
 
-describe("admin gate (LOCAL_ADMIN)", () => {
-  it("404s every admin route when LOCAL_ADMIN is not 'true'", async () => {
-    const res = await request(
-      "/admin/properties",
-      {},
-      { LOCAL_ADMIN: "false" },
-    );
-    expect(res.status).toBe(404);
+// Admin endpoints are now gated by an authenticated session (any signed-in
+// user), not the LOCAL_ADMIN env var. Property access is platform-wide, so
+// there is no owner/membership requirement on create.
+
+/** Seed a user and return a valid session cookie. */
+async function adminCookie(): Promise<string> {
+  const u = await seedUser();
+  return sessionCookie(u.id);
+}
+
+describe("admin gate (auth)", () => {
+  it("401s admin routes when signed out", async () => {
+    expect((await getRequest("/admin/properties")).status).toBe(401);
   });
 
-  it("serves admin routes when LOCAL_ADMIN is 'true'", async () => {
-    // Default test env sets LOCAL_ADMIN = "true".
-    expect((await getRequest("/admin/properties")).status).toBe(200);
+  it("serves admin routes to a signed-in user", async () => {
+    const res = await getRequest("/admin/properties", await adminCookie());
+    expect(res.status).toBe(200);
   });
 });
 
 describe("admin properties", () => {
-  it("creates a property and seeds the owner as a member", async () => {
-    const owner = await seedUser();
-    const res = await jsonRequest("/admin/properties", "POST", {
-      owner_id: owner.id,
-      name: "Cottage",
-    });
+  it("creates a property owned by the creator", async () => {
+    const u = await seedUser();
+    const res = await jsonRequest(
+      "/admin/properties",
+      "POST",
+      { name: "Cottage" },
+      { cookie: await sessionCookie(u.id) },
+    );
     expect(res.status).toBe(200);
-    const prop = (await res.json()) as { id: string; name: string };
+    const prop = (await res.json()) as {
+      id: string;
+      name: string;
+      owner_id: string;
+    };
     expect(prop.name).toBe("Cottage");
-
-    const member = await env.DB.prepare(
-      "SELECT * FROM property_members WHERE property_id = ? AND user_id = ?",
-    )
-      .bind(prop.id, owner.id)
-      .first();
-    expect(member).not.toBeNull();
+    expect(prop.owner_id).toBe(u.id);
   });
 
-  it("rejects missing owner_id or name", async () => {
-    expect(
-      (await jsonRequest("/admin/properties", "POST", { name: "x" })).status,
-    ).toBe(400);
-  });
-
-  it("rejects a non-existent owner", async () => {
-    const res = await jsonRequest("/admin/properties", "POST", {
-      owner_id: "ghost",
-      name: "x",
-    });
+  it("rejects a missing name", async () => {
+    const res = await jsonRequest(
+      "/admin/properties",
+      "POST",
+      {},
+      { cookie: await adminCookie() },
+    );
     expect(res.status).toBe(400);
   });
 
   it("updates a property", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { name: "Before" });
-    const res = await jsonRequest(`/admin/properties/${prop.id}`, "PATCH", {
-      name: "After",
-    });
+    const res = await jsonRequest(
+      `/admin/properties/${prop.id}`,
+      "PATCH",
+      { name: "After" },
+      { cookie: await adminCookie() },
+    );
     expect(res.status).toBe(200);
     expect(((await res.json()) as { name: string }).name).toBe("After");
   });
 
   it("archives then restores a property", async () => {
+    const cookie = await adminCookie();
     const owner = await seedUser();
     const prop = await seedProperty(owner.id);
 
-    const del = await jsonRequest(`/admin/properties/${prop.id}`, "DELETE", {});
+    const del = await jsonRequest(
+      `/admin/properties/${prop.id}`,
+      "DELETE",
+      {},
+      { cookie },
+    );
     expect(del.status).toBe(200);
     let row = await env.DB.prepare(
       "SELECT archived_at FROM properties WHERE id = ?",
@@ -84,6 +94,7 @@ describe("admin properties", () => {
       `/admin/properties/${prop.id}/restore`,
       "POST",
       {},
+      { cookie },
     );
     expect(restore.status).toBe(200);
     row = await env.DB.prepare(
@@ -97,6 +108,7 @@ describe("admin properties", () => {
 
 describe("admin members", () => {
   it("adds and removes a member by email", async () => {
+    const cookie = await adminCookie();
     const owner = await seedUser();
     const friend = await seedUser();
     const prop = await seedProperty(owner.id);
@@ -105,11 +117,12 @@ describe("admin members", () => {
       `/admin/properties/${prop.id}/members`,
       "POST",
       { email: friend.email, added_by: owner.id },
+      { cookie },
     );
     expect(add.status).toBe(200);
 
     const members = (await (
-      await getRequest(`/admin/properties/${prop.id}/members`)
+      await getRequest(`/admin/properties/${prop.id}/members`, cookie)
     ).json()) as { id: string }[];
     expect(members.some((m) => m.id === friend.id)).toBe(true);
 
@@ -117,17 +130,20 @@ describe("admin members", () => {
       `/admin/properties/${prop.id}/members/${friend.id}`,
       "DELETE",
       {},
+      { cookie },
     );
     expect(remove.status).toBe(200);
   });
 
   it("404s adding an unknown email", async () => {
+    const cookie = await adminCookie();
     const owner = await seedUser();
     const prop = await seedProperty(owner.id);
     const res = await jsonRequest(
       `/admin/properties/${prop.id}/members`,
       "POST",
       { email: "nobody@test.local", added_by: owner.id },
+      { cookie },
     );
     expect(res.status).toBe(404);
   });
@@ -135,13 +151,16 @@ describe("admin members", () => {
 
 describe("admin users", () => {
   it("lists users with a membership count", async () => {
+    const cookie = await adminCookie();
     const user = await seedUser();
     const prop = await seedProperty(user.id);
-    await jsonRequest(`/admin/properties/${prop.id}/members`, "POST", {
-      email: user.email,
-      added_by: user.id,
-    });
-    const rows = (await (await getRequest("/admin/users")).json()) as {
+    await jsonRequest(
+      `/admin/properties/${prop.id}/members`,
+      "POST",
+      { email: user.email, added_by: user.id },
+      { cookie },
+    );
+    const rows = (await (await getRequest("/admin/users", cookie)).json()) as {
       id: string;
       membership_count: number;
     }[];
@@ -150,8 +169,14 @@ describe("admin users", () => {
   });
 
   it("deletes a user", async () => {
+    const cookie = await adminCookie();
     const user = await seedUser();
-    const res = await jsonRequest(`/admin/users/${user.id}`, "DELETE", {});
+    const res = await jsonRequest(
+      `/admin/users/${user.id}`,
+      "DELETE",
+      {},
+      { cookie },
+    );
     expect(res.status).toBe(200);
     const row = await env.DB.prepare("SELECT id FROM users WHERE id = ?")
       .bind(user.id)
@@ -160,14 +185,14 @@ describe("admin users", () => {
   });
 
   it("issues a reset link for a user", async () => {
+    const cookie = await adminCookie();
     const user = await seedUser();
     const issuer = await seedUser();
     const res = await jsonRequest(
       `/admin/users/${user.id}/reset-link`,
       "POST",
-      {
-        issued_by: issuer.id,
-      },
+      { issued_by: issuer.id },
+      { cookie },
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { token: string; expires_at: number };
@@ -178,9 +203,10 @@ describe("admin users", () => {
 
 describe("admin stats", () => {
   it("returns aggregate counts", async () => {
+    const cookie = await adminCookie();
     const user = await seedUser();
     await seedProperty(user.id);
-    const res = await getRequest("/admin/stats");
+    const res = await getRequest("/admin/stats", cookie);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       users: number;

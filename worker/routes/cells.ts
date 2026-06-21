@@ -27,19 +27,21 @@ export const cellRoutes = new Hono<{ Bindings: Bindings }>();
 const MAX_NOTES = 2000;
 const MAX_BIND = 100;
 
+// Global access (PRD simplification): any authenticated user can act on any
+// active property, so this no longer checks property_members. The userId arg
+// is kept so call sites stay unchanged.
 async function loadMembership(
   db: D1Database,
-  userId: string,
+  _userId: string,
   propertyId: string,
 ): Promise<PropertyRow | null> {
   return db
     .prepare(
-      `SELECT p.* FROM properties p
-         JOIN property_members m ON m.property_id = p.id
-        WHERE p.id = ? AND m.user_id = ? AND p.archived_at IS NULL
+      `SELECT * FROM properties
+        WHERE id = ? AND archived_at IS NULL
         LIMIT 1`,
     )
-    .bind(propertyId, userId)
+    .bind(propertyId)
     .first<PropertyRow>();
 }
 

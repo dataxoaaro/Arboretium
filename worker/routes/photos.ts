@@ -39,17 +39,15 @@ const ALLOWED_MIME = new Set([
   "image/webp",
 ]);
 
+// Global access (PRD simplification): any authenticated user can act on any
+// active property, so this no longer checks property_members. The userId arg
+// is kept so call sites stay unchanged.
 async function loadUserProperties(
   db: D1Database,
-  userId: string,
+  _userId: string,
 ): Promise<PropertyRow[]> {
   const r = await db
-    .prepare(
-      `SELECT p.* FROM properties p
-         JOIN property_members m ON m.property_id = p.id
-        WHERE m.user_id = ? AND p.archived_at IS NULL`,
-    )
-    .bind(userId)
+    .prepare(`SELECT * FROM properties WHERE archived_at IS NULL`)
     .all<PropertyRow>();
   return r.results ?? [];
 }

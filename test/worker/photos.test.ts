@@ -137,12 +137,12 @@ describe("POST /photos", () => {
     expect(res.status).toBe(400);
   });
 
-  it("404s uploading to a plant the user cannot access", async () => {
+  it("lets any authenticated user upload to a plant (global access)", async () => {
     const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const outsider = await sessionCookie((await seedUser()).id);
     const res = await upload({ file: imageFile(), plant_id: id }, outsider);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("records the stored byte size", async () => {
@@ -207,7 +207,7 @@ describe("GET /photos (timeline)", () => {
 });
 
 describe("GET /photos/:id", () => {
-  it("404s for a user who cannot access the photo", async () => {
+  it("serves a photo to any authenticated user (global access)", async () => {
     const { property, cookie } = await seedMemberWithProperty({
       hexes: ["cell-a"],
     });
@@ -217,7 +217,7 @@ describe("GET /photos/:id", () => {
     ).json()) as PhotoRow;
     const outsider = await sessionCookie((await seedUser()).id);
     expect((await getRequest(`/photos/${photo.id}`, outsider)).status).toBe(
-      404,
+      200,
     );
   });
 });
@@ -300,7 +300,7 @@ describe("DELETE /photos/:id", () => {
     expect((await getRequest(`/photos/${photo.id}`, cookie)).status).toBe(404);
   });
 
-  it("404s for a non-owner", async () => {
+  it("lets any authenticated user delete a photo (global access)", async () => {
     const { property, cookie } = await seedMemberWithProperty({
       hexes: ["cell-a"],
     });
@@ -318,6 +318,6 @@ describe("DELETE /photos/:id", () => {
           { cookie: outsider },
         )
       ).status,
-    ).toBe(404);
+    ).toBe(200);
   });
 });

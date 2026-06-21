@@ -41,16 +41,15 @@ describe("GET /properties", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("excludes properties the user is not a member of", async () => {
+  it("returns every active property to any authenticated user", async () => {
     const owner = await seedUser();
     const other = await seedUser();
-    const prop = await seedProperty(owner.id, { name: "Private" });
-    await addMember(prop.id, owner.id);
+    await seedProperty(owner.id, { name: "Shared" });
 
     const rows = (await (
       await getRequest("/properties", await sessionCookie(other.id))
     ).json()) as unknown[];
-    expect(rows).toHaveLength(0);
+    expect(rows).toHaveLength(1);
   });
 });
 
@@ -67,16 +66,15 @@ describe("GET /properties/:id", () => {
     expect((await res.json()) as { id: string }).toMatchObject({ id: prop.id });
   });
 
-  it("404s for a non-member", async () => {
+  it("returns any active property to any authenticated user", async () => {
     const owner = await seedUser();
     const other = await seedUser();
     const prop = await seedProperty(owner.id);
-    await addMember(prop.id, owner.id);
     const res = await getRequest(
       `/properties/${prop.id}`,
       await sessionCookie(other.id),
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("404s for an archived property", async () => {

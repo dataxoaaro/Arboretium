@@ -1,29 +1,26 @@
-// ARB-E3 backend: admin endpoints, gated by the LOCAL_ADMIN env var.
-// In production the var is never set, so every /admin/* call returns 404 —
-// the deployed Worker has no admin surface. In local dev `.dev.vars` sets
-// LOCAL_ADMIN=true so the local admin tool can manage properties + users.
-//
-// SECURITY: a future production-deployment workflow can either keep this
-// file but never set LOCAL_ADMIN, or replace these routes with direct
-// Cloudflare HTTP API calls from the admin tool. See PRD §8.9.
+// ARB-E3 backend: admin endpoints. Gated by an authenticated session — any
+// registered user may manage properties (and users/backups) in production.
+// Registration itself is gated by SITE_PASSWORD, so "any registered user" is a
+// trusted group. Property access is platform-wide (no per-property
+// owner/membership), so these endpoints intentionally have no per-user scoping.
 
 import { Hono } from "hono";
 import type { UserRow, PropertyRow, PlantRow } from "../lib/db";
 import { now } from "../lib/db";
+import { readSession } from "../lib/auth";
 import { generateResetToken } from "./auth";
 
 type Bindings = {
   DB: D1Database;
-  LOCAL_ADMIN?: string;
+  JWT_SECRET: string;
 };
 
 export const adminRoutes = new Hono<{ Bindings: Bindings }>();
 
-// Gate: every endpoint below 404s unless LOCAL_ADMIN === "true".
+// Gate: every endpoint below requires a signed-in user (401 otherwise).
 adminRoutes.use("*", async (c, next) => {
-  if (c.env.LOCAL_ADMIN !== "true") {
-    return c.json({ error: "Not found" }, 404);
-  }
+  const session = await readSession(c, c.env.JWT_SECRET);
+  if (!session) return c.json({ error: "Not authenticated" }, 401);
   await next();
 });
 
@@ -37,18 +34,18 @@ adminRoutes.get("/properties", async (c) => {
 });
 
 adminRoutes.post("/properties", async (c) => {
+  const session = await readSession(c, c.env.JWT_SECRET);
+  if (!session) return c.json({ error: "Not authenticated" }, 401);
+
   const body = await c.req.json<Partial<PropertyRow>>();
-  const ownerId = body.owner_id;
   const name = body.name;
-  if (!ownerId || !name) {
-    return c.json({ error: "owner_id and name are required" }, 400);
+  if (!name) {
+    return c.json({ error: "name is required" }, 400);
   }
 
-  const owner = await c.env.DB.prepare("SELECT id FROM users WHERE id = ?")
-    .bind(ownerId)
-    .first<{ id: string }>();
-  if (!owner) return c.json({ error: "owner_id does not exist" }, 400);
-
+  // No owner concept anymore. owner_id is kept only because the column is NOT
+  // NULL; it records the creator but grants no special access.
+  const creatorId = session.sub;
   const id = crypto.randomUUID();
   const t = now();
   await c.env.DB.prepare(
@@ -58,7 +55,7 @@ adminRoutes.post("/properties", async (c) => {
   )
     .bind(
       id,
-      ownerId,
+      creatorId,
       name,
       body.boundary_geojson ?? null,
       body.included_hexes ?? "[]",
@@ -67,12 +64,6 @@ adminRoutes.post("/properties", async (c) => {
       t,
       t,
     )
-    .run();
-
-  await c.env.DB.prepare(
-    "INSERT INTO property_members (property_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(id, ownerId, ownerId, t)
     .run();
 
   const row = await c.env.DB.prepare("SELECT * FROM properties WHERE id = ?")
@@ -92,7 +83,6 @@ adminRoutes.patch("/properties/:id", async (c) => {
     "included_hexes",
     "center_lat",
     "center_lng",
-    "owner_id",
   ] as const) {
     if (k in body) {
       fields.push(`${k} = ?`);

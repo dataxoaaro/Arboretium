@@ -24,33 +24,30 @@ const MAX_TEXT = 2000;
 
 // --- helpers ---
 
+// Global access (PRD simplification): any authenticated user can act on any
+// active property, so these no longer check property_members. The userId arg
+// is kept so call sites stay unchanged.
 async function loadMembership(
   db: D1Database,
-  userId: string,
+  _userId: string,
   propertyId: string,
 ): Promise<PropertyRow | null> {
   return db
     .prepare(
-      `SELECT p.* FROM properties p
-         JOIN property_members m ON m.property_id = p.id
-        WHERE p.id = ? AND m.user_id = ? AND p.archived_at IS NULL
+      `SELECT * FROM properties
+        WHERE id = ? AND archived_at IS NULL
         LIMIT 1`,
     )
-    .bind(propertyId, userId)
+    .bind(propertyId)
     .first<PropertyRow>();
 }
 
 async function loadUserProperties(
   db: D1Database,
-  userId: string,
+  _userId: string,
 ): Promise<PropertyRow[]> {
   const r = await db
-    .prepare(
-      `SELECT p.* FROM properties p
-         JOIN property_members m ON m.property_id = p.id
-        WHERE m.user_id = ? AND p.archived_at IS NULL`,
-    )
-    .bind(userId)
+    .prepare(`SELECT * FROM properties WHERE archived_at IS NULL`)
     .all<PropertyRow>();
   return r.results ?? [];
 }

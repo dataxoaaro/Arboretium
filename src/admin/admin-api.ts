@@ -1,7 +1,6 @@
 // Typed fetch wrappers for /api/admin/*. Mounted under /admin in the SPA
-// router. The worker's /admin/* endpoints 404 unless LOCAL_ADMIN=true, so in
-// production these calls fail and the UI surfaces the error — there's no
-// separate prod gate beyond the env var.
+// router. The worker's /admin/* endpoints require an authenticated session
+// (any registered user); they 401 when signed out.
 
 import type {
   AdminStats,
@@ -46,7 +45,6 @@ export const adminApi = {
     return request("/properties");
   },
   createProperty(input: {
-    owner_id: string;
     name: string;
     boundary_geojson?: string | null;
     included_hexes?: string;
@@ -66,7 +64,6 @@ export const adminApi = {
       included_hexes: string;
       center_lat: number | null;
       center_lng: number | null;
-      owner_id: string;
     }>,
   ): Promise<PropertyRow> {
     return request(`/properties/${id}`, {

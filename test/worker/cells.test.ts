@@ -5,7 +5,6 @@ import {
   jsonRequest,
   seedUser,
   seedProperty,
-  addMember,
   seedPlant,
   sessionCookie,
   seedMemberWithProperty,
@@ -67,14 +66,13 @@ describe("GET /cells", () => {
     expect((await getRequest("/cells", cookie)).status).toBe(400);
   });
 
-  it("404s for a non-member property", async () => {
+  it("serves any active property to any authenticated user", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { hexes: ["cell-a"] });
-    await addMember(prop.id, owner.id);
     const other = await sessionCookie((await seedUser()).id);
     expect(
       (await getRequest(`/cells?property_id=${prop.id}`, other)).status,
-    ).toBe(404);
+    ).toBe(200);
   });
 
   it("returns annotated cells (notes and/or photos) within the property", async () => {
@@ -145,13 +143,12 @@ describe("GET /cells/:propertyId/:h3", () => {
     ).toBe(404);
   });
 
-  it("404s for a non-member", async () => {
+  it("serves any active property's cell to any authenticated user", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { hexes: ["cell-a"] });
-    await addMember(prop.id, owner.id);
     const other = await sessionCookie((await seedUser()).id);
     expect((await getRequest(`/cells/${prop.id}/cell-a`, other)).status).toBe(
-      404,
+      200,
     );
   });
 
@@ -222,17 +219,16 @@ describe("PUT /cells/:propertyId/:h3", () => {
     expect(res.status).toBe(400);
   });
 
-  it("404s for a non-member", async () => {
+  it("lets any authenticated user write a note on any active property", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { hexes: ["cell-a"] });
-    await addMember(prop.id, owner.id);
     const res = await jsonRequest(
       `/cells/${prop.id}/cell-a`,
       "PUT",
       { notes: "x" },
       { cookie: await sessionCookie((await seedUser()).id) },
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("requires authentication", async () => {

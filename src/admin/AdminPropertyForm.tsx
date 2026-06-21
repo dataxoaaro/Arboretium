@@ -1,12 +1,13 @@
-// ARB-053 + ARB-054: Property create + edit form. Edit mode also shows the
-// per-property member admin (ARB-059). Mounted at:
+// ARB-053 + ARB-054: Property create + edit form. Mounted at:
 //   /admin/properties/new
 //   /admin/properties/:id/edit
+//
+// No owner/membership: any signed-in user can create and edit any property.
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { adminApi, AdminApiError } from "./admin-api";
-import type { PropertyMember, PropertyRow, UserRow } from "./admin-types";
+import type { PropertyRow } from "./admin-types";
 import { AdminMap, type BoundaryShape } from "./AdminMap";
 import { t } from "../lib/strings";
 
@@ -19,10 +20,8 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
   const params = useParams<{ id: string }>();
   const propertyId = mode === "edit" ? (params.id ?? null) : null;
 
-  const [users, setUsers] = useState<UserRow[]>([]);
   const [property, setProperty] = useState<PropertyRow | null>(null);
   const [name, setName] = useState("");
-  const [ownerId, setOwnerId] = useState("");
   const [shape, setShape] = useState<BoundaryShape>({
     polygon: null,
     includedHexes: [],
@@ -44,10 +43,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
     let cancelled = false;
     async function load() {
       try {
-        const list = await adminApi.listUsers();
-        if (cancelled) return;
-        setUsers(list);
-
         if (mode === "edit" && propertyId) {
           const all = await adminApi.listProperties();
           if (cancelled) return;
@@ -55,12 +50,9 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
           if (!p) throw new AdminApiError("Property not found", 404);
           setProperty(p);
           setName(p.name);
-          setOwnerId(p.owner_id);
           const parsed = parseShape(p);
           setShape(parsed);
           setInitialShape(parsed);
-        } else if (list.length > 0) {
-          setOwnerId(list[0].id);
         }
         setLoaded(true);
       } catch {
@@ -84,10 +76,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
       setError(t.adminNameRequired);
       return;
     }
-    if (mode === "create" && !ownerId) {
-      setError(t.adminPickOwner);
-      return;
-    }
     if (!shape.polygon) {
       setError(t.adminDrawBoundary);
       return;
@@ -100,7 +88,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
     try {
       if (mode === "create") {
         const created = await adminApi.createProperty({
-          owner_id: ownerId,
           name: name.trim(),
           boundary_geojson: JSON.stringify(shape.polygon),
           included_hexes: JSON.stringify(shape.includedHexes),
@@ -111,7 +98,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
       } else if (propertyId) {
         await adminApi.updateProperty(propertyId, {
           name: name.trim(),
-          owner_id: ownerId,
           boundary_geojson: JSON.stringify(shape.polygon),
           included_hexes: JSON.stringify(shape.includedHexes),
           center_lat: shape.center?.lat ?? null,
@@ -173,23 +159,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
               placeholder={t.adminNamePlaceholder}
             />
           </Field>
-          <Field label={t.adminFieldOwner}>
-            {users.length === 0 ? (
-              <p className="text-xs text-red-700">{t.adminNoUsersRegistered}</p>
-            ) : (
-              <select
-                value={ownerId}
-                onChange={(e) => setOwnerId(e.target.value)}
-                className="w-full border border-black/15 rounded-md px-2 py-1.5 text-sm bg-white"
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.display_name} ({u.email})
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
           <div className="border border-black/10 rounded-md p-3 text-xs text-fg/70 space-y-1">
             <p>
               <strong>{t.adminBoundaryLabel}</strong>{" "}
@@ -206,10 +175,6 @@ export function AdminPropertyForm({ mode }: AdminPropertyFormProps) {
               </p>
             )}
           </div>
-
-          {mode === "edit" && propertyId && (
-            <MembersPanel propertyId={propertyId} ownerId={ownerId} />
-          )}
         </div>
 
         <div className="h-[600px] border border-black/10 rounded-md overflow-hidden">
@@ -276,120 +241,4 @@ function parseShape(p: PropertyRow): BoundaryShape {
         ? { lat: p.center_lat, lng: p.center_lng }
         : null,
   };
-}
-
-// --- ARB-059: per-property members admin ---
-
-function MembersPanel({
-  propertyId,
-  ownerId,
-}: {
-  propertyId: string;
-  ownerId: string;
-}) {
-  const [members, setMembers] = useState<PropertyMember[] | null>(null);
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    try {
-      setError(null);
-      setMembers(await adminApi.listMembers(propertyId));
-    } catch {
-      setError(t.adminLoadMembersFailed);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyId]);
-
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setBusy(true);
-    try {
-      await adminApi.addMember(propertyId, {
-        email: email.trim(),
-        added_by: ownerId,
-      });
-      setEmail("");
-      await load();
-    } catch {
-      setError(t.adminAddMemberFailed);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(userId: string, displayName: string) {
-    if (!confirm(t.adminRemoveMemberConfirm(displayName))) return;
-    setBusy(true);
-    try {
-      await adminApi.removeMember(propertyId, userId);
-      await load();
-    } catch {
-      setError(t.adminRemoveMemberFailed);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="border border-black/10 rounded-md p-3">
-      <h3 className="text-sm font-medium mb-2">{t.adminMembers}</h3>
-      {error && <div className="mb-2 text-xs text-red-700">{error}</div>}
-      <form onSubmit={add} className="flex gap-2 mb-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@example.com"
-          className="flex-1 min-w-0 border border-black/15 rounded-md px-2 py-1.5 text-xs"
-        />
-        <button
-          type="submit"
-          disabled={busy || !email.trim()}
-          className="px-2 py-1.5 rounded-md bg-fg text-bg text-xs hover:opacity-90 disabled:opacity-50"
-        >
-          {t.adminAdd}
-        </button>
-      </form>
-      {members === null && <p className="text-xs text-fg/60">{t.loading}</p>}
-      {members && members.length === 0 && (
-        <p className="text-xs text-fg/60">{t.adminNoMembers}</p>
-      )}
-      {members && members.length > 0 && (
-        <ul className="space-y-1">
-          {members.map((m) => (
-            <li
-              key={m.id}
-              className="flex items-center justify-between gap-2 text-xs border-t border-black/5 pt-1.5"
-            >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{m.display_name}</div>
-                <div className="text-fg/60 truncate">{m.email}</div>
-              </div>
-              {m.id === ownerId ? (
-                <span className="text-[10px] uppercase text-fg/50">
-                  {t.adminOwnerBadge}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void remove(m.id, m.display_name)}
-                  className="text-red-700 hover:text-red-900 underline disabled:opacity-50"
-                >
-                  {t.adminRemove}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
 }

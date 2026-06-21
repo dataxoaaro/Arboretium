@@ -22,13 +22,12 @@ describe("GET /plants", () => {
     expect((await getRequest("/plants", cookie)).status).toBe(400);
   });
 
-  it("404s for a property the user is not a member of", async () => {
+  it("serves any active property's plants to any authenticated user", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { hexes: ["cell-a"] });
-    await addMember(prop.id, owner.id);
     const other = await sessionCookie((await seedUser()).id);
     const res = await getRequest(`/plants?property_id=${prop.id}`, other);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("returns only non-archived plants whose cell is in included_hexes, sorted", async () => {
@@ -100,11 +99,11 @@ describe("GET /plants/:id", () => {
     expect((await res.json()) as PlantRow).toMatchObject({ id });
   });
 
-  it("404s when the user does not own the plant's cell", async () => {
+  it("serves a plant to any authenticated user (global access)", async () => {
     const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const outsider = await sessionCookie((await seedUser()).id);
-    expect((await getRequest(`/plants/${id}`, outsider)).status).toBe(404);
+    expect((await getRequest(`/plants/${id}`, outsider)).status).toBe(200);
   });
 
   it("404s for an archived plant", async () => {
@@ -164,10 +163,9 @@ describe("POST /plants", () => {
     expect(res.status).toBe(400);
   });
 
-  it("404s for a property the user is not a member of", async () => {
+  it("lets any authenticated user create a plant in any active property", async () => {
     const owner = await seedUser();
     const prop = await seedProperty(owner.id, { hexes: ["cell-a"] });
-    await addMember(prop.id, owner.id);
     const res = await jsonRequest(
       "/plants",
       "POST",
@@ -180,7 +178,7 @@ describe("POST /plants", () => {
       },
       { cookie: await sessionCookie((await seedUser()).id) },
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("validates required fields", async () => {
@@ -307,16 +305,16 @@ describe("PATCH /plants/:id", () => {
     expect(row.lng).toBe(25.5);
   });
 
-  it("404s when the user does not own the plant", async () => {
+  it("lets any authenticated user edit a plant (global access)", async () => {
     const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const res = await jsonRequest(
       `/plants/${id}`,
       "PATCH",
-      { common_name: "Hijack" },
+      { common_name: "Shared edit" },
       { cookie: await sessionCookie((await seedUser()).id) },
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 });
 
@@ -345,7 +343,7 @@ describe("DELETE /plants/:id", () => {
     ).toBe(404);
   });
 
-  it("404s when the user does not own the plant", async () => {
+  it("lets any authenticated user delete a plant (global access)", async () => {
     const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const res = await jsonRequest(
@@ -354,7 +352,7 @@ describe("DELETE /plants/:id", () => {
       {},
       { cookie: await sessionCookie((await seedUser()).id) },
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
   });
 
   it("requires authentication", async () => {
