@@ -5,10 +5,9 @@ import {
   jsonRequest,
   seedUser,
   seedProperty,
-  addMember,
   seedPlant,
   sessionCookie,
-  seedMemberWithProperty,
+  seedUserWithProperty,
 } from "./helpers";
 import type { PlantRow } from "../../worker/lib/db";
 
@@ -18,7 +17,7 @@ describe("GET /plants", () => {
   });
 
   it("requires a property_id", async () => {
-    const { cookie } = await seedMemberWithProperty();
+    const { cookie } = await seedUserWithProperty();
     expect((await getRequest("/plants", cookie)).status).toBe(400);
   });
 
@@ -31,7 +30,7 @@ describe("GET /plants", () => {
   });
 
   it("returns only non-archived plants whose cell is in included_hexes, sorted", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a", "cell-b"],
     });
     await seedPlant(property.id, "cell-a", { common_name: "Zebra grass" });
@@ -58,7 +57,6 @@ describe("GET /plants", () => {
     // The user is a member of property B which covers cell-x.
     const user = await seedUser();
     const propB = await seedProperty(user.id, { hexes: ["cell-x"] });
-    await addMember(propB.id, user.id);
 
     const res = await getRequest(
       `/plants?property_id=${propB.id}`,
@@ -70,7 +68,7 @@ describe("GET /plants", () => {
 
   it("returns results sorted even when hexes exceed the bind-param chunk size", async () => {
     const hexes = Array.from({ length: 150 }, (_, i) => `cell-${i}`);
-    const { property, cookie } = await seedMemberWithProperty({ hexes });
+    const { property, cookie } = await seedUserWithProperty({ hexes });
     // Insert in deliberately non-alphabetical order, spanning both chunks
     // (chunk boundary at 100).
     await seedPlant(property.id, "cell-10", { common_name: "Zinnia" });
@@ -90,7 +88,7 @@ describe("GET /plants", () => {
 
 describe("GET /plants/:id", () => {
   it("returns a plant when the user owns its cell", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -100,14 +98,14 @@ describe("GET /plants/:id", () => {
   });
 
   it("serves a plant to any authenticated user (global access)", async () => {
-    const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
+    const { property } = await seedUserWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const outsider = await sessionCookie((await seedUser()).id);
     expect((await getRequest(`/plants/${id}`, outsider)).status).toBe(200);
   });
 
   it("404s for an archived plant", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a", { archived: true });
@@ -121,7 +119,7 @@ describe("GET /plants/:id", () => {
 
 describe("POST /plants", () => {
   it("creates a plant in a cell within the property", async () => {
-    const { user, property, cookie } = await seedMemberWithProperty({
+    const { user, property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const res = await jsonRequest(
@@ -145,7 +143,7 @@ describe("POST /plants", () => {
   });
 
   it("rejects a cell not in the property's included_hexes", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const res = await jsonRequest(
@@ -182,7 +180,7 @@ describe("POST /plants", () => {
   });
 
   it("validates required fields", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const base = {
@@ -212,7 +210,7 @@ describe("POST /plants", () => {
 
 describe("PATCH /plants/:id", () => {
   it("updates editable fields", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a", {
@@ -231,7 +229,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("allows moving to a cell within one of the user's properties", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a", "cell-b"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -246,7 +244,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("rejects moving to a cell outside the user's properties", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -260,7 +258,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("rejects clearing common_name", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -274,7 +272,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("rejects a non-numeric lat or lng", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -289,7 +287,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("updates lat/lng when valid numbers are provided", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -306,7 +304,7 @@ describe("PATCH /plants/:id", () => {
   });
 
   it("lets any authenticated user edit a plant (global access)", async () => {
-    const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
+    const { property } = await seedUserWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const res = await jsonRequest(
       `/plants/${id}`,
@@ -320,7 +318,7 @@ describe("PATCH /plants/:id", () => {
 
 describe("DELETE /plants/:id", () => {
   it("soft-deletes a plant", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -334,7 +332,7 @@ describe("DELETE /plants/:id", () => {
   });
 
   it("404s on an already-archived plant", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a", { archived: true });
@@ -344,7 +342,7 @@ describe("DELETE /plants/:id", () => {
   });
 
   it("lets any authenticated user delete a plant (global access)", async () => {
-    const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
+    const { property } = await seedUserWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const res = await jsonRequest(
       `/plants/${id}`,

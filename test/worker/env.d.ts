@@ -10,7 +10,6 @@ declare module "cloudflare:test" {
     JWT_SECRET: string;
     MML_API_KEY: string;
     ALLOWED_ORIGIN: string;
-    LOCAL_ADMIN: string;
     TEST_MIGRATIONS: D1Migration[];
   }
 }

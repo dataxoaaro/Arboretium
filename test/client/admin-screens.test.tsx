@@ -164,7 +164,6 @@ describe("AdminUsers", () => {
       email: "a@b.c",
       display_name: "Aaro",
       created_at: 0,
-      membership_count: 1,
       ...over,
     } as UserRow;
   }

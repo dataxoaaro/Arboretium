@@ -26,13 +26,6 @@ export interface PropertyRow {
   updated_at: UnixMs;
 }
 
-export interface PropertyMemberRow {
-  property_id: string;
-  user_id: string;
-  added_by: string;
-  added_at: UnixMs;
-}
-
 export interface PlantRow {
   id: string;
   property_id: string;

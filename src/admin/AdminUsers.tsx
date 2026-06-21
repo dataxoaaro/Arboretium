@@ -38,12 +38,7 @@ export function AdminUsers() {
   }, []);
 
   async function remove(u: UserRow) {
-    if (
-      !confirm(
-        t.adminDeleteUserConfirm(u.display_name, u.email, u.membership_count),
-      )
-    )
-      return;
+    if (!confirm(t.adminDeleteUserConfirm(u.display_name, u.email))) return;
     setBusyId(u.id);
     try {
       await adminApi.deleteUser(u.id);
@@ -111,7 +106,6 @@ export function AdminUsers() {
               <tr>
                 <th className="px-3 py-2">{t.adminColName}</th>
                 <th className="px-3 py-2">{t.adminColEmail}</th>
-                <th className="px-3 py-2">{t.adminColMemberships}</th>
                 <th className="px-3 py-2">{t.adminColCreated}</th>
                 <th className="px-3 py-2 text-right">{t.adminColActions}</th>
               </tr>
@@ -131,7 +125,6 @@ export function AdminUsers() {
                     </div>
                   </td>
                   <td className="px-3 py-2">{u.email}</td>
-                  <td className="px-3 py-2">{u.membership_count}</td>
                   <td className="px-3 py-2 text-xs text-fg/70">
                     {new Date(u.created_at).toLocaleString()}
                   </td>

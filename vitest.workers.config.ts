@@ -35,7 +35,6 @@ export default defineWorkersProject(async () => {
               JWT_SECRET: "test-jwt-secret-key-at-least-32-bytes-long",
               MML_API_KEY: "",
               ALLOWED_ORIGIN: "http://localhost:5173",
-              LOCAL_ADMIN: "true",
               TEST_MIGRATIONS: migrations,
             },
           },

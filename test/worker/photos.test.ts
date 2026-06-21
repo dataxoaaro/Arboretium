@@ -6,7 +6,7 @@ import {
   seedUser,
   seedPlant,
   sessionCookie,
-  seedMemberWithProperty,
+  seedUserWithProperty,
 } from "./helpers";
 import type { PhotoRow } from "../../worker/lib/db";
 
@@ -34,7 +34,7 @@ describe("POST /photos", () => {
   });
 
   it("requires a file field", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -42,7 +42,7 @@ describe("POST /photos", () => {
   });
 
   it("rejects an unsupported mime type", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -54,7 +54,7 @@ describe("POST /photos", () => {
   });
 
   it("rejects an empty file", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -66,7 +66,7 @@ describe("POST /photos", () => {
   });
 
   it("rejects providing both plant and cell targets", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id } = await seedPlant(property.id, "cell-a");
@@ -83,12 +83,12 @@ describe("POST /photos", () => {
   });
 
   it("rejects providing neither plant nor cell", async () => {
-    const { cookie } = await seedMemberWithProperty({ hexes: ["cell-a"] });
+    const { cookie } = await seedUserWithProperty({ hexes: ["cell-a"] });
     expect((await upload({ file: imageFile() }, cookie)).status).toBe(400);
   });
 
   it("uploads a plant photo and serves it back", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -107,7 +107,7 @@ describe("POST /photos", () => {
   });
 
   it("uploads a cell photo when the cell is in the property", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const res = await upload(
@@ -123,7 +123,7 @@ describe("POST /photos", () => {
   });
 
   it("rejects a cell photo when the cell is not in the property", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const res = await upload(
@@ -138,7 +138,7 @@ describe("POST /photos", () => {
   });
 
   it("lets any authenticated user upload to a plant (global access)", async () => {
-    const { property } = await seedMemberWithProperty({ hexes: ["cell-a"] });
+    const { property } = await seedUserWithProperty({ hexes: ["cell-a"] });
     const { id } = await seedPlant(property.id, "cell-a");
     const outsider = await sessionCookie((await seedUser()).id);
     const res = await upload({ file: imageFile(), plant_id: id }, outsider);
@@ -146,7 +146,7 @@ describe("POST /photos", () => {
   });
 
   it("records the stored byte size", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -158,7 +158,7 @@ describe("POST /photos", () => {
   });
 
   it("refuses uploads that would exceed the storage budget (507)", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -173,7 +173,7 @@ describe("POST /photos", () => {
 
 describe("GET /photos (timeline)", () => {
   it("lists a plant's photos ordered by taken_at", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -208,7 +208,7 @@ describe("GET /photos (timeline)", () => {
 
 describe("GET /photos/:id", () => {
   it("serves a photo to any authenticated user (global access)", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -224,7 +224,7 @@ describe("GET /photos/:id", () => {
 
 describe("PATCH /photos/:id", () => {
   it("recaptions a photo", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -242,7 +242,7 @@ describe("PATCH /photos/:id", () => {
   });
 
   it("requires a caption field", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -259,7 +259,7 @@ describe("PATCH /photos/:id", () => {
   });
 
   it("clears the caption when patched with a non-string value", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -282,7 +282,7 @@ describe("PATCH /photos/:id", () => {
 
 describe("DELETE /photos/:id", () => {
   it("deletes the row and the stored object", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");
@@ -301,7 +301,7 @@ describe("DELETE /photos/:id", () => {
   });
 
   it("lets any authenticated user delete a photo (global access)", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const { id: plantId } = await seedPlant(property.id, "cell-a");

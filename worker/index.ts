@@ -16,7 +16,6 @@ type Bindings = {
   JWT_SECRET: string;
   MML_API_KEY: string;
   ALLOWED_ORIGIN: string;
-  LOCAL_ADMIN?: string;
   /** Static-assets binding — present only in the deployed Worker (see wrangler.toml). */
   ASSETS?: Fetcher;
 };

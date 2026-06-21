@@ -106,66 +106,14 @@ describe("admin properties", () => {
   });
 });
 
-describe("admin members", () => {
-  it("adds and removes a member by email", async () => {
-    const cookie = await adminCookie();
-    const owner = await seedUser();
-    const friend = await seedUser();
-    const prop = await seedProperty(owner.id);
-
-    const add = await jsonRequest(
-      `/admin/properties/${prop.id}/members`,
-      "POST",
-      { email: friend.email, added_by: owner.id },
-      { cookie },
-    );
-    expect(add.status).toBe(200);
-
-    const members = (await (
-      await getRequest(`/admin/properties/${prop.id}/members`, cookie)
-    ).json()) as { id: string }[];
-    expect(members.some((m) => m.id === friend.id)).toBe(true);
-
-    const remove = await jsonRequest(
-      `/admin/properties/${prop.id}/members/${friend.id}`,
-      "DELETE",
-      {},
-      { cookie },
-    );
-    expect(remove.status).toBe(200);
-  });
-
-  it("404s adding an unknown email", async () => {
-    const cookie = await adminCookie();
-    const owner = await seedUser();
-    const prop = await seedProperty(owner.id);
-    const res = await jsonRequest(
-      `/admin/properties/${prop.id}/members`,
-      "POST",
-      { email: "nobody@test.local", added_by: owner.id },
-      { cookie },
-    );
-    expect(res.status).toBe(404);
-  });
-});
-
 describe("admin users", () => {
-  it("lists users with a membership count", async () => {
+  it("lists users", async () => {
     const cookie = await adminCookie();
     const user = await seedUser();
-    const prop = await seedProperty(user.id);
-    await jsonRequest(
-      `/admin/properties/${prop.id}/members`,
-      "POST",
-      { email: user.email, added_by: user.id },
-      { cookie },
-    );
     const rows = (await (await getRequest("/admin/users", cookie)).json()) as {
       id: string;
-      membership_count: number;
     }[];
-    const me = rows.find((r) => r.id === user.id);
-    expect(me?.membership_count).toBe(1);
+    expect(rows.some((r) => r.id === user.id)).toBe(true);
   });
 
   it("deletes a user", async () => {

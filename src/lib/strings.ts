@@ -208,12 +208,11 @@ export const t = {
   adminUsersTitle: "Käyttäjät",
   adminNoUsers: "Ei käyttäjiä vielä.",
   adminColEmail: "Sähköposti",
-  adminColMemberships: "Jäsenyydet",
   adminColCreated: "Luotu",
   adminResetLink: "Palautuslinkki",
   adminLoadUsersFailed: "Käyttäjien lataus epäonnistui",
-  adminDeleteUserConfirm: (name: string, email: string, n: number) =>
-    `Poistetaanko ${name} (${email}) pysyvästi? Tämä poistaa ${n} jäsenyyttä sekä kaikki heidän kasvinsa ja kuvansa.`,
+  adminDeleteUserConfirm: (name: string, email: string) =>
+    `Poistetaanko ${name} (${email}) pysyvästi? Tämä poistaa kaikki heidän kasvinsa ja kuvansa.`,
   adminDeleteUserFailed: "Poisto epäonnistui",
   adminResetLinkFailed: "Palautuslinkin luonti epäonnistui",
   adminResetBannerTitle: (name: string, email: string) =>
@@ -235,30 +234,17 @@ export const t = {
   adminBackupsRun: "Aja varmuuskopio",
   adminLoadStatsFailed: "Tilastojen lataus epäonnistui",
 
-  // admin property form + members
+  // admin property form
   adminFormEditTitle: (name: string | undefined) => `Muokkaa · ${name ?? ""}`,
   adminNameRequired: "Nimi on pakollinen",
-  adminPickOwner: "Valitse omistaja",
   adminDrawBoundary: "Piirrä kohteen rajat ensin",
   adminIncludeHex: "Lisää vähintään yksi ruutu",
   adminFormSaveFailed: "Tallennus epäonnistui",
   adminFieldName: "Nimi",
-  adminFieldOwner: "Omistaja",
   adminNamePlaceholder: "esim. Tampereen piha",
-  adminNoUsersRegistered: "Ei rekisteröityjä käyttäjiä. Rekisteröi ensin yksi.",
   adminBoundaryLabel: "Rajat:",
   adminBoundaryDrawn: "piirretty",
   adminBoundaryNotDrawn: "ei vielä piirretty",
   adminHexesLabel: "Ruudut:",
   adminCentreLabel: "Keskipiste:",
-  adminMembers: "Jäsenet",
-  adminAdd: "Lisää",
-  adminLoadMembersFailed: "Jäsenten lataus epäonnistui",
-  adminAddMemberFailed: "Lisäys epäonnistui",
-  adminRemoveMemberFailed: "Poisto epäonnistui",
-  adminRemoveMemberConfirm: (name: string) =>
-    `Poistetaanko ${name} tästä kohteesta?`,
-  adminNoMembers: "Ei jäseniä vielä.",
-  adminOwnerBadge: "omistaja",
-  adminRemove: "Poista",
 } as const;

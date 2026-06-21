@@ -109,18 +109,6 @@ export async function seedProperty(
   return { id, included_hexes: hexes };
 }
 
-export async function addMember(
-  propertyId: string,
-  userId: string,
-  addedBy?: string,
-): Promise<void> {
-  await env.DB.prepare(
-    "INSERT INTO property_members (property_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(propertyId, userId, addedBy ?? userId, Date.now())
-    .run();
-}
-
 export async function seedPlant(
   propertyId: string,
   cell: string,
@@ -163,8 +151,8 @@ export async function seedPlant(
   return { id };
 }
 
-/** Create a user + property + membership in one call; returns ids and a cookie. */
-export async function seedMemberWithProperty(opts?: {
+/** Create a user + property and return ids plus a session cookie. */
+export async function seedUserWithProperty(opts?: {
   hexes?: string[];
   archived?: boolean;
 }): Promise<{
@@ -174,7 +162,6 @@ export async function seedMemberWithProperty(opts?: {
 }> {
   const user = await seedUser();
   const property = await seedProperty(user.id, opts);
-  await addMember(property.id, user.id);
   const cookie = await sessionCookie(user.id);
   return { user, property, cookie };
 }

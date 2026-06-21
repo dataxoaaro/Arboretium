@@ -1,24 +1,16 @@
 import { describe, it, expect } from "vitest";
-import {
-  getRequest,
-  seedUser,
-  seedProperty,
-  addMember,
-  sessionCookie,
-} from "./helpers";
+import { getRequest, seedUser, seedProperty, sessionCookie } from "./helpers";
 
 describe("GET /properties", () => {
   it("requires authentication", async () => {
     expect((await getRequest("/properties")).status).toBe(401);
   });
 
-  it("returns the active properties the user is a member of, sorted by name", async () => {
+  it("returns active properties sorted by name", async () => {
     const user = await seedUser();
     const cookie = await sessionCookie(user.id);
-    const b = await seedProperty(user.id, { name: "Beta" });
-    const a = await seedProperty(user.id, { name: "Alpha" });
-    await addMember(b.id, user.id);
-    await addMember(a.id, user.id);
+    await seedProperty(user.id, { name: "Beta" });
+    await seedProperty(user.id, { name: "Alpha" });
 
     const res = await getRequest("/properties", cookie);
     expect(res.status).toBe(200);
@@ -29,11 +21,10 @@ describe("GET /properties", () => {
   it("excludes archived properties", async () => {
     const user = await seedUser();
     const cookie = await sessionCookie(user.id);
-    const archived = await seedProperty(user.id, {
+    await seedProperty(user.id, {
       name: "Gone",
       archived: true,
     });
-    await addMember(archived.id, user.id);
 
     const rows = (await (await getRequest("/properties", cookie)).json()) as {
       name: string;
@@ -54,10 +45,9 @@ describe("GET /properties", () => {
 });
 
 describe("GET /properties/:id", () => {
-  it("returns a property to a member", async () => {
+  it("returns an active property", async () => {
     const user = await seedUser();
     const prop = await seedProperty(user.id, { name: "Mine" });
-    await addMember(prop.id, user.id);
     const res = await getRequest(
       `/properties/${prop.id}`,
       await sessionCookie(user.id),
@@ -80,7 +70,6 @@ describe("GET /properties/:id", () => {
   it("404s for an archived property", async () => {
     const user = await seedUser();
     const prop = await seedProperty(user.id, { archived: true });
-    await addMember(prop.id, user.id);
     const res = await getRequest(
       `/properties/${prop.id}`,
       await sessionCookie(user.id),

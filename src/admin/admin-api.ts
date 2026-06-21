@@ -4,7 +4,6 @@
 
 import type {
   AdminStats,
-  PropertyMember,
   PropertyRow,
   ResetLinkResult,
   UserRow,
@@ -76,25 +75,6 @@ export const adminApi = {
   },
   restoreProperty(id: string): Promise<{ ok: true }> {
     return request(`/properties/${id}/restore`, { method: "POST" });
-  },
-
-  // members
-  listMembers(propertyId: string): Promise<PropertyMember[]> {
-    return request(`/properties/${propertyId}/members`);
-  },
-  addMember(
-    propertyId: string,
-    input: { email: string; added_by: string },
-  ): Promise<{ ok: true; user_id: string }> {
-    return request(`/properties/${propertyId}/members`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-  removeMember(propertyId: string, userId: string): Promise<{ ok: true }> {
-    return request(`/properties/${propertyId}/members/${userId}`, {
-      method: "DELETE",
-    });
   },
 
   // users

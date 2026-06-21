@@ -2,10 +2,8 @@
 // the current page. Mounted at /admin in src/App.tsx; nested routes render
 // inside this layout.
 //
-// Access in production: the worker's /admin/* endpoints 404 unless
-// LOCAL_ADMIN=true, so any signed-in user can navigate here but the API
-// calls will fail in prod. There is no SPA-side gate — `LOCAL_ADMIN` is
-// the single source of truth.
+// The worker's /admin/* endpoints require an authenticated session, so any
+// signed-in user can use the admin tool in production.
 
 import { NavLink, Outlet } from "react-router-dom";
 import { t } from "../lib/strings";
@@ -23,9 +21,6 @@ export function AdminLayout() {
           <NavItem to="/admin/users">{t.adminNavUsers}</NavItem>
           <NavItem to="/admin/backups">{t.adminNavBackups}</NavItem>
         </nav>
-        <div className="px-4 py-3 border-t border-black/10 text-[11px] text-fg/60">
-          Endpoints 404 in prod unless <code>LOCAL_ADMIN=true</code>.
-        </div>
       </aside>
       <main className="flex-1 min-w-0">
         <Outlet />

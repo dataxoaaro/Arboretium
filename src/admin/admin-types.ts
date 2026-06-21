@@ -1,6 +1,5 @@
 // Admin-side row shapes returned by /admin/* worker endpoints. Kept separate
-// from src/lib/api.ts because admin extends a few rows with derived fields
-// (e.g. UserRow.membership_count) that the user-facing API doesn't return.
+// from src/lib/api.ts because the admin tool fetches full rows for management.
 
 export type UnixMs = number;
 
@@ -22,16 +21,6 @@ export interface UserRow {
   email: string;
   display_name: string;
   created_at: UnixMs;
-  membership_count: number;
-}
-
-export interface PropertyMember {
-  id: string;
-  email: string;
-  display_name: string;
-  created_at: UnixMs;
-  added_at: UnixMs;
-  added_by: string;
 }
 
 export interface AdminStats {

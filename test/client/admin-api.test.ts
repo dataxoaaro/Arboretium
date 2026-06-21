@@ -30,7 +30,7 @@ describe("adminApi routes", () => {
   });
 
   it("createProperty / updateProperty / archive / restore", async () => {
-    await adminApi.createProperty({ owner_id: "o", name: "P" });
+    await adminApi.createProperty({ name: "P" });
     expect([url(), init().method]).toEqual(["/api/admin/properties", "POST"]);
     await adminApi.updateProperty("p1", { name: "X" });
     expect([url(), init().method]).toEqual([
@@ -46,21 +46,6 @@ describe("adminApi routes", () => {
     expect([url(), init().method]).toEqual([
       "/api/admin/properties/p1/restore",
       "POST",
-    ]);
-  });
-
-  it("member endpoints", async () => {
-    await adminApi.listMembers("p1");
-    expect(url()).toBe("/api/admin/properties/p1/members");
-    await adminApi.addMember("p1", { email: "a@b.c", added_by: "o" });
-    expect([url(), init().method]).toEqual([
-      "/api/admin/properties/p1/members",
-      "POST",
-    ]);
-    await adminApi.removeMember("p1", "u2");
-    expect([url(), init().method]).toEqual([
-      "/api/admin/properties/p1/members/u2",
-      "DELETE",
     ]);
   });
 

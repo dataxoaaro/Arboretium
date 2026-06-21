@@ -14,7 +14,6 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM photos"),
     env.DB.prepare("DELETE FROM plants"),
     env.DB.prepare("DELETE FROM cells"),
-    env.DB.prepare("DELETE FROM property_members"),
     env.DB.prepare("DELETE FROM password_reset_tokens"),
     env.DB.prepare("DELETE FROM properties"),
     env.DB.prepare("DELETE FROM users"),

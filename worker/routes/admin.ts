@@ -127,62 +127,12 @@ adminRoutes.post("/properties/:id/restore", async (c) => {
   return c.json({ ok: true });
 });
 
-adminRoutes.get("/properties/:id/members", async (c) => {
-  const id = c.req.param("id");
-  const r = await c.env.DB.prepare(
-    `SELECT u.id, u.email, u.display_name, u.created_at, m.added_at, m.added_by
-     FROM property_members m JOIN users u ON u.id = m.user_id
-     WHERE m.property_id = ?
-     ORDER BY m.added_at ASC`,
-  )
-    .bind(id)
-    .all();
-  return c.json(r.results);
-});
-
-adminRoutes.post("/properties/:id/members", async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json<{ email?: string; added_by?: string }>();
-  if (!body.email || !body.added_by) {
-    return c.json({ error: "email and added_by required" }, 400);
-  }
-  const user = await c.env.DB.prepare(
-    "SELECT id FROM users WHERE lower(email) = lower(?)",
-  )
-    .bind(body.email)
-    .first<{ id: string }>();
-  if (!user) return c.json({ error: "User not found" }, 404);
-  try {
-    await c.env.DB.prepare(
-      "INSERT INTO property_members (property_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)",
-    )
-      .bind(id, user.id, body.added_by, now())
-      .run();
-  } catch (err) {
-    return c.json(
-      { error: "Already a member or invalid", detail: String(err) },
-      409,
-    );
-  }
-  return c.json({ ok: true, user_id: user.id });
-});
-
-adminRoutes.delete("/properties/:id/members/:userId", async (c) => {
-  await c.env.DB.prepare(
-    "DELETE FROM property_members WHERE property_id = ? AND user_id = ?",
-  )
-    .bind(c.req.param("id"), c.req.param("userId"))
-    .run();
-  return c.json({ ok: true });
-});
-
 // --- users ---
 
 adminRoutes.get("/users", async (c) => {
   const r = await c.env.DB.prepare(
-    `SELECT u.id, u.email, u.display_name, u.created_at,
-            (SELECT COUNT(*) FROM property_members WHERE user_id = u.id) AS membership_count
-     FROM users u ORDER BY u.created_at ASC`,
+    `SELECT id, email, display_name, created_at
+       FROM users ORDER BY created_at ASC`,
   ).all();
   return c.json(r.results);
 });

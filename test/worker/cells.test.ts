@@ -7,7 +7,7 @@ import {
   seedProperty,
   seedPlant,
   sessionCookie,
-  seedMemberWithProperty,
+  seedUserWithProperty,
 } from "./helpers";
 import type { CellRow } from "../../worker/lib/db";
 
@@ -62,7 +62,7 @@ describe("GET /cells", () => {
   });
 
   it("requires a property_id", async () => {
-    const { cookie } = await seedMemberWithProperty();
+    const { cookie } = await seedUserWithProperty();
     expect((await getRequest("/cells", cookie)).status).toBe(400);
   });
 
@@ -76,7 +76,7 @@ describe("GET /cells", () => {
   });
 
   it("returns annotated cells (notes and/or photos) within the property", async () => {
-    const { user, property, cookie } = await seedMemberWithProperty({
+    const { user, property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a", "cell-b", "cell-c"],
     });
     await seedCellNote(property.id, "cell-a", "rocky soil");
@@ -95,7 +95,7 @@ describe("GET /cells", () => {
   });
 
   it("returns an empty array when nothing is annotated", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const rows = (await (
@@ -107,7 +107,7 @@ describe("GET /cells", () => {
 
 describe("GET /cells/:propertyId/:h3", () => {
   it("returns notes, plants, and cell photos for a hex", async () => {
-    const { user, property, cookie } = await seedMemberWithProperty({
+    const { user, property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     await seedCellNote(property.id, "cell-a", "heavy shade");
@@ -123,7 +123,7 @@ describe("GET /cells/:propertyId/:h3", () => {
   });
 
   it("returns null notes and empty arrays for a bare cell", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const detail = (await (
@@ -135,7 +135,7 @@ describe("GET /cells/:propertyId/:h3", () => {
   });
 
   it("404s for a hex outside the property", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     expect(
@@ -159,7 +159,7 @@ describe("GET /cells/:propertyId/:h3", () => {
 
 describe("PUT /cells/:propertyId/:h3", () => {
   it("creates a note on write, then updates it", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const create = await jsonRequest(
@@ -188,7 +188,7 @@ describe("PUT /cells/:propertyId/:h3", () => {
   });
 
   it("clears the note when given whitespace", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     await jsonRequest(
@@ -207,7 +207,7 @@ describe("PUT /cells/:propertyId/:h3", () => {
   });
 
   it("rejects a hex outside the property", async () => {
-    const { property, cookie } = await seedMemberWithProperty({
+    const { property, cookie } = await seedUserWithProperty({
       hexes: ["cell-a"],
     });
     const res = await jsonRequest(
