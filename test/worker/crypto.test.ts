@@ -16,7 +16,7 @@ describe("password hashing", () => {
     const parts = stored.split("$");
     expect(parts).toHaveLength(4);
     expect(parts[0]).toBe("pbkdf2-sha256");
-    expect(parts[1]).toBe("600000");
+    expect(parts[1]).toBe("100000");
   });
 
   it("verifies a correct password and rejects a wrong one", async () => {

@@ -1,7 +1,10 @@
 // ARB-030/031: Cryptographic primitives built on Web Crypto.
 // Workers expose the standard `crypto.subtle` API — no external deps required.
 
-const PBKDF2_ITERATIONS = 600_000;
+// Cloudflare Workers' Web Crypto caps PBKDF2 at 100_000 iterations; requesting
+// more throws NotSupportedError at runtime. This is the platform ceiling (below
+// OWASP's 600k recommendation, but it's the most the Workers runtime allows).
+const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_SALT_BYTES = 16;
 const PBKDF2_HASH_BYTES = 32;
 const PBKDF2_LABEL = `pbkdf2-sha256$${PBKDF2_ITERATIONS}`;
@@ -41,8 +44,8 @@ export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /**
- * Hash a password with PBKDF2-SHA256, 600k iterations, 16-byte random salt.
- * Returns a self-describing string: `pbkdf2-sha256$600000$<saltB64>$<hashB64>`.
+ * Hash a password with PBKDF2-SHA256, 100k iterations, 16-byte random salt.
+ * Returns a self-describing string: `pbkdf2-sha256$100000$<saltB64>$<hashB64>`.
  */
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(PBKDF2_SALT_BYTES));
@@ -84,9 +87,14 @@ export async function dummyVerify(password: string): Promise<void> {
   await verifyPassword(password, DUMMY_HASH);
 }
 
-/** Pre-computed PBKDF2 result for the literal string "dummy". */
+/**
+ * Constant dummy hash for timing-equalised login. Only the iteration count must
+ * match real hashes (so CPU time is comparable); the all-zero salt/hash never
+ * match a real password, which is the point. Iterations stay within the Workers
+ * PBKDF2 ceiling so dummyVerify doesn't throw.
+ */
 const DUMMY_HASH =
-  "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  "pbkdf2-sha256$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 async function deriveBits(
   password: string,
