@@ -56,12 +56,16 @@ const ANNOTATED_SOURCE = "arb-annotated";
 // CSS cascade.
 const COLOR_PLANTED = "#3f7d44";
 const COLOR_ANNOTATED = "#c98a2b";
+// Empty cells: a white wash/outline so the grid shows over dark aerial imagery.
+const COLOR_EMPTY = "#ffffff";
 
 export interface MapMarker {
   id: string;
   lat: number;
   lng: number;
   label: string;
+  /** Item colour (override ?? category default). Defaults to the planted green. */
+  color?: string;
 }
 
 export interface MapViewHandle {
@@ -80,6 +84,8 @@ interface MapViewProps {
   occupiedCells?: ReadonlySet<H3Index>;
   /** Cells with notes/photos but no plants — rendered amber (ARB-146). */
   annotatedCells?: ReadonlySet<H3Index>;
+  /** Per occupied cell: the resolved item colour (override ?? category). */
+  cellColors?: ReadonlyMap<H3Index, string>;
   /** Called when the user taps a cell. */
   onCellTap?: (h3: H3Index, point: { lat: number; lng: number }) => void;
   /** Plant markers to render. */
@@ -98,6 +104,7 @@ export function MapView({
   includedHexes,
   occupiedCells,
   annotatedCells,
+  cellColors,
   onCellTap,
   markers,
   onMarkerClick,
@@ -134,11 +141,13 @@ export function MapView({
     included: ReadonlySet<H3Index> | undefined;
     occupied: ReadonlySet<H3Index>;
     annotated: ReadonlySet<H3Index>;
+    colors: ReadonlyMap<H3Index, string>;
   }>({
     mode: hexMode,
     included: undefined,
     occupied: new Set(),
     annotated: new Set(),
+    colors: new Map(),
   });
 
   // --- initial config fetch (once) ---
@@ -200,17 +209,11 @@ export function MapView({
         // z=13 onward — coarse hexes when zoomed out, fine res-15 up close.
         minzoom: 13,
         paint: {
-          // Occupied cells read clearly; empty cells stay a faint light wash so
-          // the grid is still visible over dark aerial (Esri) imagery.
-          "fill-color": [
-            "match",
-            ["get", "state"],
-            "planted",
-            "rgba(63, 125, 68, 0.45)",
-            "annotated",
-            "rgba(201, 138, 43, 0.45)",
-            /* empty */ "rgba(255, 255, 255, 0.06)",
-          ],
+          // Each cell carries its own `color` (item colour / amber / white) and
+          // a `kind` ("filled" for occupied/annotated, "empty" otherwise). Empty
+          // cells stay a faint white wash so the grid shows over aerial imagery.
+          "fill-color": ["get", "color"],
+          "fill-opacity": ["match", ["get", "kind"], "empty", 0.06, 0.42],
         },
       });
       map.addLayer({
@@ -219,26 +222,11 @@ export function MapView({
         source: HEX_SOURCE,
         minzoom: 13,
         paint: {
-          // White-ish lines so the grid shows on photo basemaps; occupied cells
-          // get a coloured, thicker outline so they stand out from empty ones.
-          "line-color": [
-            "match",
-            ["get", "state"],
-            "planted",
-            "rgba(63, 125, 68, 0.95)",
-            "annotated",
-            "rgba(201, 138, 43, 0.95)",
-            /* empty */ "rgba(255, 255, 255, 0.65)",
-          ],
-          "line-width": [
-            "match",
-            ["get", "state"],
-            "planted",
-            1.6,
-            "annotated",
-            1.6,
-            /* empty */ 1,
-          ],
+          // White-ish, thin lines for empty cells; the item colour and a thicker
+          // outline for occupied/annotated cells so they stand out.
+          "line-color": ["get", "color"],
+          "line-opacity": ["match", ["get", "kind"], "empty", 0.65, 0.95],
+          "line-width": ["match", ["get", "kind"], "empty", 1, 1.6],
         },
       });
 
@@ -310,7 +298,8 @@ export function MapView({
         source: MARKER_SOURCE,
         paint: {
           "circle-radius": 7,
-          "circle-color": COLOR_PLANTED,
+          // Each marker carries its item colour so the dot matches its hex.
+          "circle-color": ["coalesce", ["get", "color"], COLOR_PLANTED],
           "circle-stroke-color": "#fff",
           "circle-stroke-width": 2,
         },
@@ -339,7 +328,7 @@ export function MapView({
       // Read the latest inputs from the ref so this never needs rebinding.
       map.on("zoomend", () => {
         const i = hexInputsRef.current;
-        drawHexes(map, i.mode, i.included, i.occupied, i.annotated);
+        drawHexes(map, i.mode, i.included, i.occupied, i.annotated, i.colors);
       });
 
       setStyleReady(true);
@@ -437,17 +426,26 @@ export function MapView({
   useEffect(() => {
     const occupied = occupiedCells ?? new Set<H3Index>();
     const annotated = annotatedCells ?? new Set<H3Index>();
+    const colors = cellColors ?? new Map<H3Index, string>();
     // Keep the ref current so the "zoomend" handler redraws with fresh data.
     hexInputsRef.current = {
       mode: hexMode,
       included: includedHexes,
       occupied,
       annotated,
+      colors,
     };
     const map = mapRef.current;
     if (!map || !styleReady) return;
-    drawHexes(map, hexMode, includedHexes, occupied, annotated);
-  }, [hexMode, includedHexes, occupiedCells, annotatedCells, styleReady]);
+    drawHexes(map, hexMode, includedHexes, occupied, annotated, colors);
+  }, [
+    hexMode,
+    includedHexes,
+    occupiedCells,
+    annotatedCells,
+    cellColors,
+    styleReady,
+  ]);
 
   // Push annotated-cell markers (amber dots at each cell centre).
   useEffect(() => {
@@ -502,7 +500,7 @@ export function MapView({
       features: list.map((m) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [m.lng, m.lat] },
-        properties: { id: m.id, label: m.label },
+        properties: { id: m.id, label: m.label, color: m.color ?? null },
       })),
     });
   }, [markers, styleReady]);
@@ -617,9 +615,10 @@ const STATE_RANK: Record<CellState, number> = {
   planted: 2,
 };
 
-function mergeState(prev: CellState | undefined, next: CellState): CellState {
-  if (!prev) return next;
-  return STATE_RANK[next] > STATE_RANK[prev] ? next : prev;
+interface CellAgg {
+  state: CellState;
+  /** Colour to paint: the occupying item's colour, amber, or white. */
+  color: string;
 }
 
 function drawHexes(
@@ -628,6 +627,7 @@ function drawHexes(
   included: ReadonlySet<H3Index> | undefined,
   occupied: ReadonlySet<H3Index>,
   annotated: ReadonlySet<H3Index>,
+  colors: ReadonlyMap<H3Index, string>,
 ): void {
   const src = map.getSource(HEX_SOURCE) as maplibregl.GeoJSONSource | undefined;
   if (!src) return;
@@ -640,28 +640,40 @@ function drawHexes(
   // Pick the grid resolution from the current zoom so the grid "switches
   // levels": coarse parent hexes when zoomed out, the true res-15 cells up
   // close. Property cells are stored at res-15; coarser levels aggregate them,
-  // so a coarse hex reads as occupied when any child cell is occupied.
+  // so a coarse hex reads as occupied (and takes the colour of the highest-
+  // priority child) when any child cell is occupied.
   const targetRes = resolutionForZoom(map.getZoom());
-  const stateByCell = new Map<H3Index, CellState>();
+  const byCell = new Map<H3Index, CellAgg>();
   for (const h3 of included) {
     const renderCell = targetRes >= RES_FINE ? h3 : parentCell(h3, targetRes);
-    const childState: CellState = occupied.has(h3)
+    const state: CellState = occupied.has(h3)
       ? "planted"
       : annotated.has(h3)
         ? "annotated"
         : "empty";
-    stateByCell.set(
-      renderCell,
-      mergeState(stateByCell.get(renderCell), childState),
-    );
+    const color =
+      state === "planted"
+        ? (colors.get(h3) ?? COLOR_PLANTED)
+        : state === "annotated"
+          ? COLOR_ANNOTATED
+          : COLOR_EMPTY;
+    const prev = byCell.get(renderCell);
+    if (!prev || STATE_RANK[state] > STATE_RANK[prev.state]) {
+      byCell.set(renderCell, { state, color });
+    }
   }
 
   const features: GeoJSON.Feature[] = [];
-  for (const [cell, state] of stateByCell) {
+  for (const [cell, agg] of byCell) {
     features.push({
       type: "Feature",
       geometry: { type: "Polygon", coordinates: [cellRing(cell)] },
-      properties: { h3: cell, state },
+      properties: {
+        h3: cell,
+        state: agg.state,
+        color: agg.color,
+        kind: agg.state === "empty" ? "empty" : "filled",
+      },
     });
   }
   src.setData({ type: "FeatureCollection", features });

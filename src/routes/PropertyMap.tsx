@@ -18,6 +18,7 @@ import { CellSheet } from "../components/cells/CellSheet";
 import { PropertyTabs } from "../components/PropertyTabs";
 import { cellAtPoint, cellCenter } from "../lib/h3";
 import { cachedRead } from "../lib/cached-read";
+import { resolveItemColor } from "../lib/categories";
 
 type SheetState =
   | { kind: "none" }
@@ -37,6 +38,8 @@ export function PropertyMap() {
     lng: number;
     zoom?: number;
   } | null>(null);
+  // When set, the map is in "pick a new cell" mode for moving this item.
+  const [moving, setMoving] = useState<Plant | null>(null);
 
   const reloadPlants = useCallback(async () => {
     try {
@@ -101,6 +104,17 @@ export function PropertyMap() {
     [cells, occupied],
   );
 
+  // Per occupied cell, the colour to paint the hex (item override ?? category).
+  // If a cell holds several items, the last one wins — fine for the common case
+  // of one item per cell.
+  const cellColors = useMemo<Map<string, string>>(() => {
+    const m = new Map<string, string>();
+    for (const p of plants ?? []) {
+      m.set(p.h3_res15, resolveItemColor(p.category, p.color));
+    }
+    return m;
+  }, [plants]);
+
   const markers = useMemo<MapMarker[]>(
     () =>
       (plants ?? []).map((p) => ({
@@ -108,6 +122,7 @@ export function PropertyMap() {
         lat: p.lat,
         lng: p.lng,
         label: p.common_name,
+        color: resolveItemColor(p.category, p.color),
       })),
     [plants],
   );
@@ -130,7 +145,27 @@ export function PropertyMap() {
   function handleCellTap(cell: string): void {
     // Taps outside the property would just fail server-side; ignore them.
     if (!includedHexes.has(cell)) return;
+    // In "move" mode the next valid cell tap relocates the item instead of
+    // opening the cell sheet.
+    if (moving) {
+      void doMove(cell);
+      return;
+    }
     setSheet({ kind: "cell", h3: cell });
+  }
+
+  async function doMove(cell: string): Promise<void> {
+    const plant = moving;
+    if (!plant) return;
+    const [lng, lat] = cellCenter(cell);
+    try {
+      await api.updatePlant(plant.id, { h3_res15: cell, lat, lng });
+      setMoving(null);
+      await reloadPlants();
+    } catch {
+      setError(t.plantMoveFailed);
+      setMoving(null);
+    }
   }
 
   function handleMarkerClick(id: string): void {
@@ -192,6 +227,7 @@ export function PropertyMap() {
           includedHexes={includedHexes}
           occupiedCells={occupied}
           annotatedCells={annotated}
+          cellColors={cellColors}
           markers={markers}
           onCellTap={handleCellTap}
           onMarkerClick={handleMarkerClick}
@@ -208,6 +244,18 @@ export function PropertyMap() {
         <div className="absolute bottom-5 left-5 z-10 bg-[var(--color-surface)]/95 border border-[var(--color-border)] rounded-xl shadow px-3 py-2 text-sm font-medium">
           {plants === null ? t.loading : t.mapPlants(plants.length)}
         </div>
+        {moving && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100%-1rem)] bg-[var(--color-accent)] text-white rounded-xl shadow-lg px-4 py-2 text-sm flex items-center gap-3">
+            <span>{t.plantMovePrompt(moving.common_name)}</span>
+            <button
+              type="button"
+              onClick={() => setMoving(null)}
+              className="underline whitespace-nowrap min-h-11"
+            >
+              {t.plantMoveCancel}
+            </button>
+          </div>
+        )}
       </div>
 
       <PlantSheet
@@ -216,6 +264,10 @@ export function PropertyMap() {
         onClose={() => setSheet({ kind: "none" })}
         onSaved={handlePlantSaved}
         onDeleted={handlePlantDeleted}
+        onMove={(plant) => {
+          setMoving(plant);
+          setSheet({ kind: "none" });
+        }}
       />
       <CellSheet
         open={sheet.kind === "cell"}

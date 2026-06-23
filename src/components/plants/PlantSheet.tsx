@@ -10,6 +10,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, type Photo, type Plant, type PlantInput } from "../../lib/api";
 import { preparePhoto } from "../../lib/photos";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import {
+  CATEGORIES,
+  PALETTE,
+  categoryOf,
+  type CategoryKey,
+} from "../../lib/categories";
 import { t } from "../../lib/strings";
 
 export type PlantSheetMode =
@@ -29,6 +36,8 @@ interface PlantSheetProps {
   onClose: () => void;
   onSaved: (plant: Plant) => void;
   onDeleted: (plantId: string) => void;
+  /** "Move to another cell" — parent puts the map into pick-a-cell mode. */
+  onMove: (plant: Plant) => void;
 }
 
 export function PlantSheet({
@@ -37,6 +46,7 @@ export function PlantSheet({
   onClose,
   onSaved,
   onDeleted,
+  onMove,
 }: PlantSheetProps) {
   // Close on Escape.
   useEffect(() => {
@@ -68,6 +78,7 @@ export function PlantSheet({
             onClose={onClose}
             onEdit={() => onSaved(mode.plant)} // signal upward; parent flips to edit mode
             onDeleted={onDeleted}
+            onMove={() => onMove(mode.plant)}
           />
         )}
         {(mode.kind === "create" || mode.kind === "edit") && (
@@ -85,26 +96,30 @@ function PlantInfo({
   onClose,
   onEdit,
   onDeleted,
+  onMove,
 }: {
   plant: Plant;
   onClose: () => void;
   onEdit: () => void;
   onDeleted: (id: string) => void;
+  onMove: () => void;
 }) {
   const [tab, setTab] = useState<"info" | "timeline">("info");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const cat = categoryOf(plant.category);
+  const isKasvi = cat.key === "kasvi";
 
-  async function del() {
-    if (!confirm(t.plantDeleteConfirm(plant.common_name))) return;
+  async function doDelete() {
     setBusy(true);
     try {
       await api.deletePlant(plant.id);
       onDeleted(plant.id);
     } catch {
       setError(t.plantDeleteFailed);
-    } finally {
       setBusy(false);
+      setConfirmOpen(false);
     }
   }
 
@@ -130,10 +145,24 @@ function PlantInfo({
         )}
         {tab === "info" && (
           <>
+            <Field label={t.plantCategory}>
+              <span className="inline-flex items-center gap-1.5">
+                <span aria-hidden>{cat.icon}</span>
+                {cat.label}
+              </span>
+            </Field>
             <Field label={t.plantCommonName}>{plant.common_name}</Field>
-            <Field label={t.plantLatinName}>{plant.latin_name ?? "—"}</Field>
-            <Field label={t.plantType}>{plant.plant_type ?? "—"}</Field>
-            <Field label={t.plantPlanted}>{plant.planted_date ?? "—"}</Field>
+            {isKasvi && (
+              <>
+                <Field label={t.plantLatinName}>
+                  {plant.latin_name ?? "—"}
+                </Field>
+                <Field label={t.plantType}>{plant.plant_type ?? "—"}</Field>
+                <Field label={t.plantPlanted}>
+                  {plant.planted_date ?? "—"}
+                </Field>
+              </>
+            )}
             <Field label={t.plantSource}>{plant.source ?? "—"}</Field>
             <Field label={t.plantNotes}>
               {plant.notes ? (
@@ -159,14 +188,32 @@ function PlantInfo({
         {tab === "timeline" && <PhotoTimeline plant={plant} />}
       </div>
       <SheetFooter>
-        <Button variant="danger" onClick={() => void del()} disabled={busy}>
+        <Button
+          variant="danger"
+          onClick={() => setConfirmOpen(true)}
+          disabled={busy}
+        >
           {t.delete}
+        </Button>
+        <Button variant="ghost" onClick={onMove} disabled={busy}>
+          {t.plantMove}
         </Button>
         <div className="flex-1" />
         <Button variant="primary" size="lg" onClick={onEdit}>
           {t.edit}
         </Button>
       </SheetFooter>
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t.plantDeleteConfirm(plant.common_name)}
+        message={t.plantDeleteRecoverable}
+        confirmLabel={t.delete}
+        cancelLabel={t.cancel}
+        danger
+        busy={busy}
+        onConfirm={() => void doDelete()}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </>
   );
 }
@@ -366,6 +413,10 @@ function PlantForm({
   const isEdit = mode.kind === "edit";
   const initial = isEdit ? mode.plant : null;
 
+  const [category, setCategory] = useState<CategoryKey>(
+    categoryOf(initial?.category).key,
+  );
+  const [color, setColor] = useState<string | null>(initial?.color ?? null);
   const [commonName, setCommonName] = useState(initial?.common_name ?? "");
   const [latinName, setLatinName] = useState(initial?.latin_name ?? "");
   const [plantType, setPlantType] = useState(initial?.plant_type ?? "");
@@ -374,6 +425,7 @@ function PlantForm({
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isKasvi = category === "kasvi";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -385,14 +437,20 @@ function PlantForm({
     setSubmitting(true);
     try {
       let saved: Plant;
+      // Plant-only fields are cleared for non-Kasvi categories.
+      const latin = isKasvi ? latinName.trim() || null : null;
+      const type = isKasvi ? plantType.trim() || null : null;
+      const planted = isKasvi ? plantedDate.trim() || null : null;
       if (isEdit && initial) {
         saved = await api.updatePlant(initial.id, {
           common_name: commonName.trim(),
-          latin_name: latinName.trim() || null,
-          plant_type: plantType.trim() || null,
-          planted_date: plantedDate.trim() || null,
+          latin_name: latin,
+          plant_type: type,
+          planted_date: planted,
           source: source.trim() || null,
           notes: notes.trim() || null,
+          category,
+          color,
         });
       } else {
         const create = mode as Extract<PlantSheetMode, { kind: "create" }>;
@@ -402,11 +460,13 @@ function PlantForm({
           lat: create.lat,
           lng: create.lng,
           common_name: commonName.trim(),
-          latin_name: latinName.trim() || null,
-          plant_type: plantType.trim() || null,
-          planted_date: plantedDate.trim() || null,
+          latin_name: latin,
+          plant_type: type,
+          planted_date: planted,
           source: source.trim() || null,
           notes: notes.trim() || null,
+          category,
+          color,
         };
         saved = await api.createPlant(input);
       }
@@ -442,6 +502,70 @@ function PlantForm({
               </code>
             </p>
           )}
+          <div>
+            <div className="text-xs font-medium text-fg/70 mb-1">
+              {t.plantCategory}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => {
+                    setCategory(c.key);
+                    setColor(null);
+                  }}
+                  aria-pressed={category === c.key}
+                  className={`min-h-11 px-3 rounded-xl border inline-flex items-center gap-1.5 ${
+                    category === c.key
+                      ? "border-[var(--color-accent)] bg-black/[0.04] font-medium"
+                      : "border-[var(--color-border)] hover:bg-black/[0.03]"
+                  }`}
+                >
+                  <span aria-hidden>{c.icon}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-medium text-fg/70 mb-1">
+              {t.plantColor}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setColor(null)}
+                aria-pressed={color === null}
+                className={`min-h-11 px-3 rounded-xl border text-xs inline-flex items-center gap-1.5 ${
+                  color === null
+                    ? "border-[var(--color-accent)] font-medium"
+                    : "border-[var(--color-border)]"
+                }`}
+              >
+                <span
+                  className="w-4 h-4 rounded-full border border-black/10"
+                  style={{ backgroundColor: categoryOf(category).color }}
+                />
+                {t.plantColorDefault}
+              </button>
+              {PALETTE.map((sw) => (
+                <button
+                  key={sw}
+                  type="button"
+                  onClick={() => setColor(sw)}
+                  aria-label={sw}
+                  aria-pressed={color === sw}
+                  className={`w-10 h-10 rounded-full border-2 ${
+                    color === sw
+                      ? "border-[var(--color-fg)]"
+                      : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: sw }}
+                />
+              ))}
+            </div>
+          </div>
           <FormField label={t.plantCommonNameField}>
             <input
               required
@@ -451,28 +575,32 @@ function PlantForm({
               className={inputClass}
             />
           </FormField>
-          <FormField label={t.plantLatinName}>
-            <input
-              value={latinName ?? ""}
-              onChange={(e) => setLatinName(e.target.value)}
-              className={inputClass}
-            />
-          </FormField>
-          <FormField label={t.plantType}>
-            <input
-              value={plantType ?? ""}
-              onChange={(e) => setPlantType(e.target.value)}
-              placeholder={t.plantTypePlaceholder}
-              className={inputClass}
-            />
-          </FormField>
-          <FormField label={t.plantPlantedField}>
-            <input
-              value={plantedDate ?? ""}
-              onChange={(e) => setPlantedDate(e.target.value)}
-              className={inputClass}
-            />
-          </FormField>
+          {isKasvi && (
+            <>
+              <FormField label={t.plantLatinName}>
+                <input
+                  value={latinName ?? ""}
+                  onChange={(e) => setLatinName(e.target.value)}
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label={t.plantType}>
+                <input
+                  value={plantType ?? ""}
+                  onChange={(e) => setPlantType(e.target.value)}
+                  placeholder={t.plantTypePlaceholder}
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label={t.plantPlantedField}>
+                <input
+                  value={plantedDate ?? ""}
+                  onChange={(e) => setPlantedDate(e.target.value)}
+                  className={inputClass}
+                />
+              </FormField>
+            </>
+          )}
           <FormField label={t.plantSource}>
             <input
               value={source ?? ""}

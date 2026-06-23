@@ -12,6 +12,7 @@ import { AdminLayout } from "./admin/AdminLayout";
 import { AdminProperties } from "./admin/AdminProperties";
 import { AdminPropertyForm } from "./admin/AdminPropertyForm";
 import { AdminUsers } from "./admin/AdminUsers";
+import { AdminArchived } from "./admin/AdminArchived";
 import { AdminBackups } from "./admin/AdminBackups";
 import { AuthGuard } from "./components/AuthGuard";
 import { PropertySwitcher } from "./components/PropertySwitcher";
@@ -92,6 +93,7 @@ export function App() {
             element={<AdminPropertyForm mode="edit" />}
           />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="archived" element={<AdminArchived />} />
           <Route path="backups" element={<AdminBackups />} />
         </Route>
 

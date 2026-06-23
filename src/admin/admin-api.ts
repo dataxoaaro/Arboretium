@@ -4,6 +4,7 @@
 
 import type {
   AdminStats,
+  PlantRow,
   PropertyRow,
   ResetLinkResult,
   UserRow,
@@ -92,6 +93,14 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ issued_by: issuedBy }),
     });
+  },
+
+  // archived items (restore)
+  listArchivedPlants(): Promise<PlantRow[]> {
+    return request("/plants/archived");
+  },
+  restorePlant(id: string): Promise<{ ok: true }> {
+    return request(`/plants/${id}/restore`, { method: "POST" });
   },
 
   // diagnostics

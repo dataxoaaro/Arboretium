@@ -38,6 +38,10 @@ export interface PlantRow {
   planted_date: string | null;
   source: string | null;
   notes: string | null;
+  /** Built-in category key (e.g. 'kasvi', 'linnunpontto', 'riistakamera'). */
+  category: string;
+  /** Optional per-item colour override (hex); null = use the category colour. */
+  color: string | null;
   archived: 0 | 1;
   created_by: string;
   created_at: UnixMs;

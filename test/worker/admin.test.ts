@@ -5,6 +5,7 @@ import {
   jsonRequest,
   seedUser,
   seedProperty,
+  seedPlant,
   sessionCookie,
 } from "./helpers";
 
@@ -146,6 +147,39 @@ describe("admin users", () => {
     const body = (await res.json()) as { token: string; expires_at: number };
     expect(typeof body.token).toBe("string");
     expect(body.expires_at).toBeGreaterThan(Date.now());
+  });
+});
+
+describe("admin archived items", () => {
+  it("401s when signed out", async () => {
+    expect((await getRequest("/admin/plants/archived")).status).toBe(401);
+  });
+
+  it("lists archived plants and restores them", async () => {
+    const cookie = await adminCookie();
+    const owner = await seedUser();
+    const prop = await seedProperty(owner.id);
+    const plant = await seedPlant(prop.id, "8f00000000000ff", {
+      common_name: "Vanha omena",
+      archived: true,
+    });
+
+    const list = await getRequest("/admin/plants/archived", cookie);
+    expect(list.status).toBe(200);
+    const rows = (await list.json()) as { id: string }[];
+    expect(rows.some((r) => r.id === plant.id)).toBe(true);
+
+    const restore = await jsonRequest(
+      `/admin/plants/${plant.id}/restore`,
+      "POST",
+      {},
+      { cookie },
+    );
+    expect(restore.status).toBe(200);
+    const row = await env.DB.prepare("SELECT archived FROM plants WHERE id = ?")
+      .bind(plant.id)
+      .first<{ archived: number }>();
+    expect(row?.archived).toBe(0);
   });
 });
 

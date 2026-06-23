@@ -176,5 +176,26 @@ adminRoutes.get("/stats", async (c) => {
   });
 });
 
-// Reserved imports for forward use without unused-import complaints.
-export type _Reserved = UserRow | PlantRow;
+// --- archived items (restore) ---
+
+// List soft-deleted plants/items so an admin can recover them.
+adminRoutes.get("/plants/archived", async (c) => {
+  const r = await c.env.DB.prepare(
+    "SELECT * FROM plants WHERE archived = 1 ORDER BY updated_at DESC",
+  ).all<PlantRow>();
+  return c.json(r.results ?? []);
+});
+
+// Restore a soft-deleted plant/item (clears the archived flag).
+adminRoutes.post("/plants/:id/restore", async (c) => {
+  const id = c.req.param("id");
+  await c.env.DB.prepare(
+    "UPDATE plants SET archived = 0, updated_at = ? WHERE id = ?",
+  )
+    .bind(now(), id)
+    .run();
+  return c.json({ ok: true });
+});
+
+// Reserved import for forward use without unused-import complaints.
+export type _Reserved = UserRow;

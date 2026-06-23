@@ -23,6 +23,27 @@ export interface UserRow {
   created_at: UnixMs;
 }
 
+export interface PlantRow {
+  id: string;
+  property_id: string;
+  h3_res15: string;
+  lat: number;
+  lng: number;
+  common_name: string;
+  latin_name: string | null;
+  plant_type: string | null;
+  planted_date: string | null;
+  source: string | null;
+  notes: string | null;
+  category: string;
+  color: string | null;
+  archived: 0 | 1;
+  created_by: string;
+  created_at: UnixMs;
+  last_edited_by: string;
+  updated_at: UnixMs;
+}
+
 export interface AdminStats {
   users: number;
   properties_active: number;

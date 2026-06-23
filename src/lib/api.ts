@@ -35,6 +35,8 @@ export interface Plant {
   planted_date: string | null;
   source: string | null;
   notes: string | null;
+  category: string;
+  color: string | null;
   archived: 0 | 1;
   created_by: string;
   created_at: number;
@@ -53,6 +55,8 @@ export interface PlantInput {
   planted_date?: string | null;
   source?: string | null;
   notes?: string | null;
+  category?: string;
+  color?: string | null;
 }
 
 export type PlantPatch = Partial<Omit<PlantInput, "property_id">>;

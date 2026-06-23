@@ -79,6 +79,23 @@ function trimOrNull(v: unknown, max: number): string | null {
   return t.slice(0, max);
 }
 
+// Built-in categories (mirrors src/lib/categories.ts). Unknown values fall back
+// to "kasvi" so the column is never invalid.
+const CATEGORY_KEYS: ReadonlyArray<string> = [
+  "kasvi",
+  "linnunpontto",
+  "riistakamera",
+];
+
+function normCategory(v: unknown): string {
+  return typeof v === "string" && CATEGORY_KEYS.includes(v) ? v : "kasvi";
+}
+
+/** A 6-digit hex colour override, or null to use the category colour. */
+function normColor(v: unknown): string | null {
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+}
+
 // --- GET /plants?property_id=... ---
 plantRoutes.get("/", async (c) => {
   const session = await readSession(c, c.env.JWT_SECRET);
@@ -180,6 +197,8 @@ plantRoutes.post("/", async (c) => {
     planted_date?: unknown;
     source?: unknown;
     notes?: unknown;
+    category?: unknown;
+    color?: unknown;
   }>();
 
   const propertyId =
@@ -211,9 +230,9 @@ plantRoutes.post("/", async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO plants
        (id, property_id, h3_res15, lat, lng, common_name, latin_name,
-        plant_type, planted_date, source, notes, archived,
+        plant_type, planted_date, source, notes, category, color, archived,
         created_by, created_at, last_edited_by, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -227,6 +246,8 @@ plantRoutes.post("/", async (c) => {
       trimOrNull(body.planted_date, 32),
       trimOrNull(body.source, MAX_NAME),
       trimOrNull(body.notes, MAX_TEXT),
+      normCategory(body.category),
+      normColor(body.color),
       session.sub,
       t,
       session.sub,
@@ -269,6 +290,8 @@ plantRoutes.patch("/:id", async (c) => {
       planted_date: unknown;
       source: unknown;
       notes: unknown;
+      category: unknown;
+      color: unknown;
     }>
   >();
 
@@ -332,6 +355,8 @@ plantRoutes.patch("/:id", async (c) => {
     set("planted_date", trimOrNull(body.planted_date, 32));
   if ("source" in body) set("source", trimOrNull(body.source, MAX_NAME));
   if ("notes" in body) set("notes", trimOrNull(body.notes, MAX_TEXT));
+  if ("category" in body) set("category", normCategory(body.category));
+  if ("color" in body) set("color", normColor(body.color));
 
   set("last_edited_by", session.sub);
   set("updated_at", now());

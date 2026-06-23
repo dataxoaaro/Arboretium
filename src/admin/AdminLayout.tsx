@@ -19,6 +19,7 @@ export function AdminLayout() {
         <nav className="flex-1 p-2 text-sm flex flex-col gap-1">
           <NavItem to="/admin/properties">{t.adminNavProperties}</NavItem>
           <NavItem to="/admin/users">{t.adminNavUsers}</NavItem>
+          <NavItem to="/admin/archived">{t.adminNavArchived}</NavItem>
           <NavItem to="/admin/backups">{t.adminNavBackups}</NavItem>
         </nav>
       </aside>

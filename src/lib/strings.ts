@@ -122,8 +122,8 @@ export const t = {
   showOnMap: "Näytä kartalla",
 
   // plant sheet
-  plantAddTitle: "Lisää kasvi",
-  plantEditTitle: "Muokkaa kasvia",
+  plantAddTitle: "Lisää kohde",
+  plantEditTitle: "Muokkaa kohdetta",
   plantTabInfo: "Tiedot",
   plantTabTimeline: "Aikajana",
   plantCommonName: "Yleisnimi",
@@ -143,8 +143,19 @@ export const t = {
   plantCommonNameRequired: "Yleisnimi on pakollinen",
   plantSaveFailed: "Tallennus epäonnistui",
   plantDeleteConfirm: (name: string) => `Poistetaanko "${name}"?`,
+  plantDeleteRecoverable: "Voit palauttaa sen myöhemmin ylläpidosta.",
   plantDeleteFailed: "Poisto epäonnistui",
   plantCellLabel: "Ruutu:",
+  // category + colour
+  plantCategory: "Kategoria",
+  plantColor: "Väri",
+  plantColorDefault: "Oletus",
+  // move to another cell
+  plantMove: "Siirrä",
+  plantMovePrompt: (name: string) =>
+    `Napauta kartalta uusi ruutu kohteelle "${name}".`,
+  plantMoveCancel: "Peruuta siirto",
+  plantMoveFailed: "Siirto epäonnistui",
 
   // photo timeline (shared by plant + cell)
   photoAdd: "Lisää kuva",
@@ -186,6 +197,14 @@ export const t = {
   adminNavProperties: "Kohteet",
   adminNavUsers: "Käyttäjät",
   adminNavBackups: "Varmuuskopiot",
+  adminNavArchived: "Arkisto",
+  adminArchivedTitle: "Arkistoidut kohteet",
+  adminArchivedHint:
+    "Poistetut kohteet säilyvät tässä. Palauta tuodaksesi kohteen takaisin kartalle.",
+  adminArchivedEmpty: "Ei arkistoituja kohteita.",
+  adminArchivedRestore: "Palauta",
+  adminArchivedLoadFailed: "Arkiston lataus epäonnistui",
+  adminArchivedRestoreFailed: "Palautus epäonnistui",
   adminNewProperty: "Uusi kohde",
   adminActive: (n: number) => `Aktiiviset (${n})`,
   adminArchived: (n: number) => `Arkistoidut (${n})`,

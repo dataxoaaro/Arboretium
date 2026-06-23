@@ -60,6 +60,7 @@ function renderSheet(mode: PlantSheetMode) {
   const onClose = vi.fn();
   const onSaved = vi.fn();
   const onDeleted = vi.fn();
+  const onMove = vi.fn();
   render(
     <PlantSheet
       open
@@ -67,9 +68,10 @@ function renderSheet(mode: PlantSheetMode) {
       onClose={onClose}
       onSaved={onSaved}
       onDeleted={onDeleted}
+      onMove={onMove}
     />,
   );
-  return { onClose, onSaved, onDeleted };
+  return { onClose, onSaved, onDeleted, onMove };
 }
 
 const CREATE: PlantSheetMode = {
@@ -94,6 +96,7 @@ describe("PlantSheet visibility", () => {
         onClose={() => {}}
         onSaved={() => {}}
         onDeleted={() => {}}
+        onMove={() => {}}
       />,
     );
     expect(container).toBeEmptyDOMElement();
@@ -179,24 +182,25 @@ describe("PlantSheet info", () => {
     expect(onSaved).toHaveBeenCalled();
   });
 
-  it("deletes after confirmation", async () => {
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true),
-    );
+  it("deletes after confirming in the dialog", async () => {
     vi.mocked(api.deletePlant).mockResolvedValue({ ok: true });
     const { onDeleted } = renderSheet({ kind: "info", plant: plant() });
+    // Footer delete opens the confirm dialog; confirm there (the second
+    // "Poista" button, rendered after the footer) performs the delete.
     await userEvent.click(screen.getByRole("button", { name: t.delete }));
+    const deleteButtons = await screen.findAllByRole("button", {
+      name: t.delete,
+    });
+    await userEvent.click(deleteButtons[deleteButtons.length - 1]);
     await waitFor(() => expect(onDeleted).toHaveBeenCalledWith("plant-1"));
   });
 
-  it("does not delete when cancelled", async () => {
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => false),
-    );
+  it("does not delete when the dialog is cancelled", async () => {
     const { onDeleted } = renderSheet({ kind: "info", plant: plant() });
     await userEvent.click(screen.getByRole("button", { name: t.delete }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: t.cancel }),
+    );
     expect(api.deletePlant).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
   });

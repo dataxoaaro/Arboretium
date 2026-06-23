@@ -140,6 +140,52 @@ describe("POST /plants", () => {
     expect(row.created_by).toBe(user.id);
     expect(row.last_edited_by).toBe(user.id);
     expect(row.archived).toBe(0);
+    // Defaults when not supplied.
+    expect(row.category).toBe("kasvi");
+    expect(row.color).toBeNull();
+  });
+
+  it("stores a category and a colour override, normalising bad input", async () => {
+    const { property, cookie } = await seedUserWithProperty({
+      hexes: ["cell-a"],
+    });
+    const ok = (await (
+      await jsonRequest(
+        "/plants",
+        "POST",
+        {
+          property_id: property.id,
+          h3_res15: "cell-a",
+          lat: 60.1,
+          lng: 24.9,
+          common_name: "Pönttö",
+          category: "linnunpontto",
+          color: "#2f6f9f",
+        },
+        { cookie },
+      )
+    ).json()) as PlantRow;
+    expect(ok.category).toBe("linnunpontto");
+    expect(ok.color).toBe("#2f6f9f");
+
+    const bad = (await (
+      await jsonRequest(
+        "/plants",
+        "POST",
+        {
+          property_id: property.id,
+          h3_res15: "cell-a",
+          lat: 60.1,
+          lng: 24.9,
+          common_name: "X",
+          category: "bogus",
+          color: "red",
+        },
+        { cookie },
+      )
+    ).json()) as PlantRow;
+    expect(bad.category).toBe("kasvi");
+    expect(bad.color).toBeNull();
   });
 
   it("rejects a cell not in the property's included_hexes", async () => {
