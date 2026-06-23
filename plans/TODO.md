@@ -12,11 +12,15 @@ Implementation plan for the v1.0 MVP defined in [`arboretum_prd.md`](./arboretum
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 
-**Current focus:** `ARB-E10` Deploy to Cloudflare (E3..E9 done; the offline
-**write** queue is deferred to v1.1). A test harness (Vitest, ~90% coverage,
-CI-gated), a nature design system (DESIGN.md — mobile-first, large touch
-targets), and an infra/cost review (`claudedocs/infra-cost-review.md` — €0/mo on
-the free tier) are in place.
+**Current focus:** `ARB-E11` Polish & MVP launch. **`ARB-E10` deploy is DONE** —
+the site is live at `https://arboretium.tikutakuminni.workers.dev` (single
+`arboretium` Worker, all migrations applied to remote D1, all three secrets set).
+Deploy is manual (`pnpm build && pnpm deploy`); CI only lints/tests/builds. The
+offline **write** queue stays deferred to v1.1. A test harness (Vitest, ~90%
+coverage, CI-gated), a nature design system (DESIGN.md), and an infra/cost review
+(`claudedocs/infra-cost-review.md` — €0/mo) are in place. Remaining E10 loose
+ends: finish the full prod smoke test (no property exists yet) and decide on a
+custom domain.
 
 ---
 
@@ -216,16 +220,16 @@ First production deployment to Cloudflare. Requires a Cloudflare account.
 
 Depends on: `ARB-E2` minimum (auth must work end-to-end before deploying).
 
-- [ ] **ARB-180** — Cloudflare account: create Workers + Pages projects, D1 database, R2 bucket, KV namespace. (§8.8)
-- [ ] **ARB-181** — Apply migrations to remote D1. (§8.8)
-- [ ] **ARB-182** — `wrangler secret put SITE_PASSWORD` (4–6-word passphrase). (§8.7)
-- [ ] **ARB-183** — `wrangler secret put JWT_SECRET` (cryptographically random 32+ bytes). (§8.7)
-- [ ] **ARB-184** — `wrangler secret put MML_API_KEY`. (§8.5)
-- [ ] **ARB-185** — First Worker deploy via `wrangler deploy`. (§8.8)
-- [ ] **ARB-186** — Connect Pages to GitHub; verify auto-deploy on `main`. (§8.8)
-- [ ] **ARB-187** — Confirm long random `*.pages.dev` subdomain (URL obfuscation). (§8.8)
-- [ ] **ARB-188** — Smoke test in production: register first user → admin creates property locally → user logs in and sees property. (§8.7, §8.9)
-- [ ] **ARB-189** — PWA install on a real phone; verify offline read works. (§6.10)
+- [x] **ARB-180** — Cloudflare account + D1 database, R2 bucket, KV namespace. _Single Worker (static assets) replaces the separate Pages project — see ADR-0003._ (§8.8)
+- [x] **ARB-181** — Apply migrations to remote D1. _All through `0009` applied._ (§8.8)
+- [x] **ARB-182** — `wrangler secret put SITE_PASSWORD` (4–6-word passphrase). (§8.7)
+- [x] **ARB-183** — `wrangler secret put JWT_SECRET` (cryptographically random 32+ bytes). (§8.7)
+- [x] **ARB-184** — `wrangler secret put MML_API_KEY`. (§8.5)
+- [x] **ARB-185** — First Worker deploy via `wrangler deploy`. _Live at `arboretium.tikutakuminni.workers.dev`._ (§8.8)
+- [~] **ARB-186** — _N/A under the single-Worker model: no Pages project. Deploy is manual (`pnpm build && pnpm deploy`); CI does not auto-deploy._ Decide later if GitHub auto-deploy (Workers Builds) is wanted. (§8.8)
+- [~] **ARB-187** — _N/A: served on `workers.dev`, not `pages.dev`. The current subdomain is not obfuscated — revisit if URL obfuscation is still wanted._ (§8.8)
+- [~] **ARB-188** — Smoke test in production. _Partially done: registration works (1 user). Still to do: create a property → see it → drop a plant → upload a photo. No property exists yet._ Access model is now platform-wide (no per-property membership). (§8.7, §8.9)
+- [~] **ARB-189** — PWA install on a real phone. _Installed (confirmed on device); verify offline read end-to-end._ Note: force-update the installed shell after each deploy. (§6.10)
 - [ ] **ARB-190** — Optional: custom domain. (§8.8)
 
 ---

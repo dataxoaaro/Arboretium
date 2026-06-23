@@ -82,7 +82,9 @@ export function CellSheet({
         role="dialog"
         aria-modal="true"
         aria-label={t.cellTitle}
-        className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[var(--color-bg)] z-50 shadow-2xl border-l border-[var(--color-border)] flex flex-col"
+        // Mobile: a bottom sheet (max 85vh) so the map stays visible above it.
+        // sm+: a full-height right drawer.
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl border-t sm:inset-x-auto sm:top-0 sm:right-0 sm:bottom-0 sm:max-h-none sm:w-[440px] sm:rounded-none sm:border-t-0 sm:border-l bg-[var(--color-bg)] z-50 shadow-2xl border-[var(--color-border)] flex flex-col"
       >
         <header className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
           <h2 className="text-xl font-semibold font-[family-name:var(--font-display)]">

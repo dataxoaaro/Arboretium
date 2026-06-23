@@ -4,13 +4,9 @@
 // straight to that plant. Annotated cells (notes/photos, no plant) show as
 // amber on the map.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  MapView,
-  type MapMarker,
-  type MapViewHandle,
-} from "../components/map/MapView";
+import { MapView, type MapMarker } from "../components/map/MapView";
 import { useCurrentProperty } from "../lib/property-context";
 import { api, type CellSummary, type Plant } from "../lib/api";
 import { t } from "../lib/strings";
@@ -36,7 +32,11 @@ export function PropertyMap() {
   const [cells, setCells] = useState<CellSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetState>({ kind: "none" });
-  const handleRef = useRef<MapViewHandle | null>(null);
+  const [focus, setFocus] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+  } | null>(null);
 
   const reloadPlants = useCallback(async () => {
     try {
@@ -66,14 +66,15 @@ export function PropertyMap() {
     void reloadCells();
   }, [reloadPlants, reloadCells]);
 
-  // ARB-110: arriving with #plant=<id> flies to it and opens its detail.
+  // ARB-110: arriving with #plant=<id> just flies to it on the map. "Show on
+  // map" must NOT open the plant sheet — on mobile that would cover the very
+  // map the user asked to see. They can tap the marker for details.
   useEffect(() => {
     if (!plants || !location.hash.startsWith("#plant=")) return;
     const id = location.hash.slice("#plant=".length);
     const plant = plants.find((p) => p.id === id);
     if (!plant) return;
-    setSheet({ kind: "plant", mode: { kind: "info", plant } });
-    handleRef.current?.flyTo({ lat: plant.lat, lng: plant.lng, zoom: 19 });
+    setFocus({ lat: plant.lat, lng: plant.lng, zoom: 19 });
     navigate(location.pathname, { replace: true });
   }, [plants, location.hash, location.pathname, navigate]);
 
@@ -194,7 +195,7 @@ export function PropertyMap() {
           markers={markers}
           onCellTap={handleCellTap}
           onMarkerClick={handleMarkerClick}
-          handleRef={handleRef}
+          focus={focus}
         />
         <button
           type="button"

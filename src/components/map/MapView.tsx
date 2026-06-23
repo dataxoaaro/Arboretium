@@ -24,12 +24,16 @@ import {
   cellAtPoint,
   cellRing,
   cellCenter,
+  parentCell,
+  resolutionForZoom,
   RES_FINE,
   type H3Index,
 } from "../../lib/h3";
 import { readHexMode, writeHexMode } from "./visibility-mode";
 import { BasemapToggle } from "./BasemapToggle";
 import { t } from "../../lib/strings";
+
+type CellState = "planted" | "annotated" | "empty";
 
 const SRC_BASEMAP = "basemap";
 const LAYER_BASEMAP = "basemap";
@@ -84,6 +88,8 @@ interface MapViewProps {
   onMarkerClick?: (id: string) => void;
   /** Imperative handle setter (parent can flyTo etc.). */
   handleRef?: React.MutableRefObject<MapViewHandle | null>;
+  /** When set, the map flies here once ready — e.g. the list's "Show on map". */
+  focus?: { lat: number; lng: number; zoom?: number } | null;
 }
 
 export function MapView({
@@ -96,15 +102,22 @@ export function MapView({
   markers,
   onMarkerClick,
   handleRef,
+  focus,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  // Default to MML satellite — same as AdminMap.
-  const [basemap, setBasemap] = useState<BasemapLayer>("satellite-mml");
+  // Default to Esri aerial imagery (Ilmakuva). Users want the photo basemap on
+  // first load; they can switch to MML or street from the toggle.
+  const [basemap, setBasemap] = useState<BasemapLayer>("satellite-esri");
   const [config, setConfig] = useState<MapConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [providerFellBack, setProviderFellBack] = useState(false);
   const [hexMode, setHexMode] = useState<"off" | "on">(() => readHexMode());
+  // Flipped true once the map style has loaded and the overlay sources/layers
+  // exist. Overlay-push effects gate on this and re-run when it flips, so the
+  // grid (and other overlays) draw on first load instead of only after the
+  // user toggles the grid off and back on.
+  const [styleReady, setStyleReady] = useState(false);
   const [gps, setGps] = useState<{
     lat: number;
     lng: number;
@@ -114,6 +127,19 @@ export function MapView({
   // callback without rebinding on every parent render.
   const onMarkerClickRef = useRef(onMarkerClick);
   onMarkerClickRef.current = onMarkerClick;
+  // Latest hex inputs, read by the map's "zoomend" handler so it can redraw the
+  // grid at the zoom-appropriate resolution without rebinding on every render.
+  const hexInputsRef = useRef<{
+    mode: "off" | "on";
+    included: ReadonlySet<H3Index> | undefined;
+    occupied: ReadonlySet<H3Index>;
+    annotated: ReadonlySet<H3Index>;
+  }>({
+    mode: hexMode,
+    included: undefined,
+    occupied: new Set(),
+    annotated: new Set(),
+  });
 
   // --- initial config fetch (once) ---
   useEffect(() => {
@@ -170,18 +196,20 @@ export function MapView({
         id: HEX_FILL_LAYER,
         type: "fill",
         source: HEX_SOURCE,
-        // Tiny at low zoom; only paint from z=17 to keep the map readable
-        // when zoomed out.
-        minzoom: 17,
+        // The grid resolution follows the zoom (see drawHexes), so draw from
+        // z=13 onward — coarse hexes when zoomed out, fine res-15 up close.
+        minzoom: 13,
         paint: {
+          // Occupied cells read clearly; empty cells stay a faint light wash so
+          // the grid is still visible over dark aerial (Esri) imagery.
           "fill-color": [
             "match",
             ["get", "state"],
             "planted",
-            "rgba(63, 125, 68, 0.32)",
+            "rgba(63, 125, 68, 0.45)",
             "annotated",
-            "rgba(201, 138, 43, 0.32)",
-            /* empty */ "rgba(0, 0, 0, 0.04)",
+            "rgba(201, 138, 43, 0.45)",
+            /* empty */ "rgba(255, 255, 255, 0.06)",
           ],
         },
       });
@@ -189,18 +217,28 @@ export function MapView({
         id: HEX_LINE_LAYER,
         type: "line",
         source: HEX_SOURCE,
-        minzoom: 17,
+        minzoom: 13,
         paint: {
+          // White-ish lines so the grid shows on photo basemaps; occupied cells
+          // get a coloured, thicker outline so they stand out from empty ones.
           "line-color": [
             "match",
             ["get", "state"],
             "planted",
-            "rgba(63, 125, 68, 0.9)",
+            "rgba(63, 125, 68, 0.95)",
             "annotated",
             "rgba(201, 138, 43, 0.95)",
-            /* empty */ "rgba(0, 0, 0, 0.35)",
+            /* empty */ "rgba(255, 255, 255, 0.65)",
           ],
-          "line-width": 0.6,
+          "line-width": [
+            "match",
+            ["get", "state"],
+            "planted",
+            1.6,
+            "annotated",
+            1.6,
+            /* empty */ 1,
+          ],
         },
       });
 
@@ -296,6 +334,15 @@ export function MapView({
           "text-halo-width": 1.2,
         },
       });
+
+      // The grid resolution depends on zoom; redraw once the zoom settles.
+      // Read the latest inputs from the ref so this never needs rebinding.
+      map.on("zoomend", () => {
+        const i = hexInputsRef.current;
+        drawHexes(map, i.mode, i.included, i.occupied, i.annotated);
+      });
+
+      setStyleReady(true);
     });
 
     // Marker hits take precedence over cell taps.
@@ -328,6 +375,7 @@ export function MapView({
     return () => {
       map.remove();
       mapRef.current = null;
+      setStyleReady(false);
     };
     // initial.* / onCellTap intentionally not deps — initialisation is one-shot
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -387,21 +435,24 @@ export function MapView({
   // hexes outside the property — when there's no included set or mode is off,
   // the source is cleared.
   useEffect(() => {
+    const occupied = occupiedCells ?? new Set<H3Index>();
+    const annotated = annotatedCells ?? new Set<H3Index>();
+    // Keep the ref current so the "zoomend" handler redraws with fresh data.
+    hexInputsRef.current = {
+      mode: hexMode,
+      included: includedHexes,
+      occupied,
+      annotated,
+    };
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-    drawHexes(
-      map,
-      hexMode,
-      includedHexes,
-      occupiedCells ?? new Set(),
-      annotatedCells ?? new Set(),
-    );
-  }, [hexMode, includedHexes, occupiedCells, annotatedCells, config]);
+    if (!map || !styleReady) return;
+    drawHexes(map, hexMode, includedHexes, occupied, annotated);
+  }, [hexMode, includedHexes, occupiedCells, annotatedCells, styleReady]);
 
   // Push annotated-cell markers (amber dots at each cell centre).
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !styleReady) return;
     const src = map.getSource(ANNOTATED_SOURCE) as
       | maplibregl.GeoJSONSource
       | undefined;
@@ -420,12 +471,12 @@ export function MapView({
       }
     }
     src.setData({ type: "FeatureCollection", features });
-  }, [annotatedCells, config]);
+  }, [annotatedCells, styleReady]);
 
   // Push boundary.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !styleReady) return;
     const src = map.getSource(BOUNDARY_SOURCE) as
       | maplibregl.GeoJSONSource
       | undefined;
@@ -435,12 +486,12 @@ export function MapView({
     } else {
       src.setData({ type: "FeatureCollection", features: [] });
     }
-  }, [boundary, config]);
+  }, [boundary, styleReady]);
 
   // Push markers.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !styleReady) return;
     const src = map.getSource(MARKER_SOURCE) as
       | maplibregl.GeoJSONSource
       | undefined;
@@ -454,7 +505,19 @@ export function MapView({
         properties: { id: m.id, label: m.label },
       })),
     });
-  }, [markers, config]);
+  }, [markers, styleReady]);
+
+  // Fly to an externally-requested focus point (the list view's "Show on map")
+  // once the style is ready. This does NOT open any sheet — it just zooms.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleReady || !focus) return;
+    map.flyTo({
+      center: [focus.lng, focus.lat],
+      zoom: focus.zoom ?? Math.max(map.getZoom(), 18),
+      duration: 600,
+    });
+  }, [focus, styleReady]);
 
   // Expose imperative handle.
   useEffect(() => {
@@ -478,7 +541,7 @@ export function MapView({
   // Push GPS dot.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !gps) return;
+    if (!map || !styleReady || !gps) return;
     const src = map.getSource(GPS_SOURCE) as
       | maplibregl.GeoJSONSource
       | undefined;
@@ -499,7 +562,7 @@ export function MapView({
         },
       ],
     });
-  }, [gps, config]);
+  }, [gps, styleReady]);
 
   function changeHexMode(next: "off" | "on") {
     setHexMode(next);
@@ -547,6 +610,18 @@ export function MapView({
   );
 }
 
+// Rank used to aggregate child states into a coarse parent hex.
+const STATE_RANK: Record<CellState, number> = {
+  empty: 0,
+  annotated: 1,
+  planted: 2,
+};
+
+function mergeState(prev: CellState | undefined, next: CellState): CellState {
+  if (!prev) return next;
+  return STATE_RANK[next] > STATE_RANK[prev] ? next : prev;
+}
+
 function drawHexes(
   map: maplibregl.Map,
   mode: "off" | "on",
@@ -562,18 +637,31 @@ function drawHexes(
     return;
   }
 
-  const features: GeoJSON.Feature[] = [];
+  // Pick the grid resolution from the current zoom so the grid "switches
+  // levels": coarse parent hexes when zoomed out, the true res-15 cells up
+  // close. Property cells are stored at res-15; coarser levels aggregate them,
+  // so a coarse hex reads as occupied when any child cell is occupied.
+  const targetRes = resolutionForZoom(map.getZoom());
+  const stateByCell = new Map<H3Index, CellState>();
   for (const h3 of included) {
-    // Planted wins over annotated: a cell with a plant always reads as planted.
-    const state = occupied.has(h3)
+    const renderCell = targetRes >= RES_FINE ? h3 : parentCell(h3, targetRes);
+    const childState: CellState = occupied.has(h3)
       ? "planted"
       : annotated.has(h3)
         ? "annotated"
         : "empty";
+    stateByCell.set(
+      renderCell,
+      mergeState(stateByCell.get(renderCell), childState),
+    );
+  }
+
+  const features: GeoJSON.Feature[] = [];
+  for (const [cell, state] of stateByCell) {
     features.push({
       type: "Feature",
-      geometry: { type: "Polygon", coordinates: [cellRing(h3)] },
-      properties: { h3, state },
+      geometry: { type: "Polygon", coordinates: [cellRing(cell)] },
+      properties: { h3: cell, state },
     });
   }
   src.setData({ type: "FeatureCollection", features });
