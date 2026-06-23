@@ -8,10 +8,13 @@ Deploy is **manual**. CI (`.github/workflows/ci.yml`) only lints/typechecks/
 tests/builds — it does **not** deploy. There is no GitHub auto-deploy.
 
 ```bash
-pnpm build && pnpm deploy        # pnpm deploy == `wrangler deploy` (uploads ./dist)
+pnpm build && pnpm run deploy    # `pnpm run deploy` == `wrangler deploy` (uploads ./dist)
 ```
 
-> `pnpm deploy` does **not** build — it only uploads whatever is already in
+> Use `pnpm run deploy`, not `pnpm deploy` — the latter is a reserved pnpm
+> built-in and errors with `ERR_PNPM_CANNOT_DEPLOY`.
+>
+> `wrangler deploy` does **not** build — it only uploads whatever is already in
 > `./dist`. Always `pnpm build` first, or you'll ship a stale bundle.
 
 Keep `main` in sync with what's deployed: `wrangler deploy` overrides anything
