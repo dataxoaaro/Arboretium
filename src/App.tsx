@@ -97,6 +97,21 @@ export function App() {
           <Route path="backups" element={<AdminBackups />} />
         </Route>
 
+        {/* In-property map/list: full-height, no page padding, so the map fills
+            the viewport under the header and the page itself doesn't scroll
+            (keeps the map in focus on mobile instead of drifting away). */}
+        <Route
+          path="/properties/:propertyId"
+          element={
+            <AuthGuard>
+              <PropertyLayout />
+            </AuthGuard>
+          }
+        >
+          <Route index element={<PropertyMap />} />
+          <Route path="plants" element={<PropertyPlants />} />
+        </Route>
+
         {/* Everything else uses the standard padded main area. */}
         <Route
           path="*"
@@ -115,17 +130,6 @@ export function App() {
                     </AuthGuard>
                   }
                 />
-                <Route
-                  path="/properties/:propertyId"
-                  element={
-                    <AuthGuard>
-                      <PropertyLayout />
-                    </AuthGuard>
-                  }
-                >
-                  <Route index element={<PropertyMap />} />
-                  <Route path="plants" element={<PropertyPlants />} />
-                </Route>
                 <Route
                   path="/settings"
                   element={

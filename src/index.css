@@ -29,6 +29,13 @@ body,
   height: 100%;
 }
 
+/* Stop mobile pull-to-refresh and rubber-band scroll-chaining so dragging on
+   the map (or an inner scroll area) doesn't move the whole page out of focus. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-fg);

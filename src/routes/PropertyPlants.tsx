@@ -8,10 +8,17 @@ import { api, type Plant } from "../lib/api";
 import { cachedRead } from "../lib/cached-read";
 import { useCurrentProperty } from "../lib/property-context";
 import { PropertyTabs } from "../components/PropertyTabs";
+import {
+  CATEGORIES,
+  categoryOf,
+  resolveItemColor,
+  type CategoryKey,
+} from "../lib/categories";
 import { t } from "../lib/strings";
 
 type SortKey = "common_name" | "plant_type" | "planted_date" | "updated_at";
 type SortDir = "asc" | "desc";
+type CategoryFilter = CategoryKey | "all";
 
 export function PropertyPlants() {
   const property = useCurrentProperty();
@@ -19,6 +26,7 @@ export function PropertyPlants() {
   const [plants, setPlants] = useState<Plant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("common_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -40,6 +48,9 @@ export function PropertyPlants() {
     if (!plants) return null;
     const q = search.trim().toLowerCase();
     let rows = plants;
+    if (categoryFilter !== "all") {
+      rows = rows.filter((p) => categoryOf(p.category).key === categoryFilter);
+    }
     if (q) {
       rows = rows.filter((p) => {
         return (
@@ -57,16 +68,17 @@ export function PropertyPlants() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
-  }, [plants, search, sortKey, sortDir]);
+  }, [plants, search, categoryFilter, sortKey, sortDir]);
 
-  const speciesCount = useMemo(() => {
-    if (!plants) return 0;
-    const set = new Set<string>();
-    for (const p of plants) {
-      const key = (p.latin_name ?? p.common_name).toLowerCase().trim();
-      if (key) set.add(key);
+  // Per-category counts for the filter chips.
+  const counts = useMemo(() => {
+    const m = new Map<CategoryKey, number>();
+    for (const c of CATEGORIES) m.set(c.key, 0);
+    for (const p of plants ?? []) {
+      const k = categoryOf(p.category).key;
+      m.set(k, (m.get(k) ?? 0) + 1);
     }
-    return set.size;
+    return m;
   }, [plants]);
 
   function toggleSort(key: SortKey) {
@@ -93,10 +105,32 @@ export function PropertyPlants() {
           </h1>
           {plants && (
             <p className="text-sm text-muted">
-              {t.plantsSummary(plants.length, speciesCount)}
+              {t.plantsSummary(plants.length)}
             </p>
           )}
         </header>
+
+        {plants && plants.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            <FilterChip
+              active={categoryFilter === "all"}
+              onClick={() => setCategoryFilter("all")}
+            >
+              {t.filterAll} ({plants.length})
+            </FilterChip>
+            {CATEGORIES.map((c) => (
+              <FilterChip
+                key={c.key}
+                active={categoryFilter === c.key}
+                color={c.color}
+                onClick={() => setCategoryFilter(c.key)}
+              >
+                <span aria-hidden>{c.icon}</span> {c.label} (
+                {counts.get(c.key) ?? 0})
+              </FilterChip>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-xl px-3 py-2 text-sm">
@@ -172,9 +206,22 @@ export function PropertyPlants() {
                 {filtered.map((p) => (
                   <tr key={p.id} className="border-t border-black/5">
                     <td className="px-3 py-2">
-                      <div className="font-medium">{p.common_name}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: resolveItemColor(
+                              p.category,
+                              p.color,
+                            ),
+                          }}
+                          aria-hidden
+                        />
+                        <span aria-hidden>{categoryOf(p.category).icon}</span>
+                        <span className="truncate">{p.common_name}</span>
+                      </div>
                       {p.latin_name && (
-                        <div className="text-[11px] italic text-fg/60">
+                        <div className="text-[11px] italic text-fg/60 pl-[1.6rem]">
                           {p.latin_name}
                         </div>
                       )}
@@ -201,6 +248,40 @@ export function PropertyPlants() {
         )}
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  color,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  color?: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-11 px-3 rounded-full border text-sm inline-flex items-center gap-1.5 ${
+        active
+          ? "border-[var(--color-accent)] bg-black/[0.05] font-medium"
+          : "border-[var(--color-border)] hover:bg-black/[0.03]"
+      }`}
+    >
+      {color && (
+        <span
+          className="w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: color }}
+          aria-hidden
+        />
+      )}
+      {children}
+    </button>
   );
 }
 

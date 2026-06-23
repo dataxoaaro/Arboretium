@@ -81,7 +81,7 @@ export const t = {
 
   // property tabs
   tabMap: "Kartta",
-  tabPlants: "Kasvit",
+  tabPlants: "Lista",
 
   // property switcher
   switcherLabel: "Kohde",
@@ -106,19 +106,19 @@ export const t = {
   basemapFellBack: "MML-avainta ei ole — käytetään Esri-ilmakuvaa.",
 
   // plants list
-  plantsHeading: (name: string) => `${name} · kasvit`,
-  plantsSummary: (count: number, species: number) =>
-    `${count} kasvia · ${species} lajia`,
+  plantsHeading: (name: string) => `${name}`,
+  plantsSummary: (count: number) => `${count} kpl`,
+  filterAll: "Kaikki",
   plantsSearchPlaceholder:
     "Hae nimellä, latinalla, muistiinpanoilla tai lähteellä…",
   plantsEmpty:
-    "Ei vielä kasveja tässä kohteessa. Avaa kartta ja napauta ruutua lisätäksesi kasvin.",
+    "Ei vielä merkintöjä. Avaa kartta ja napauta ruutua lisätäksesi.",
   colName: "Nimi",
   colType: "Tyyppi",
   colPlanted: "Istutettu",
   colUpdated: "Päivitetty",
   colActions: "Toiminnot",
-  plantsNoMatch: (q: string) => `Ei hakua "${q}" vastaavia kasveja.`,
+  plantsNoMatch: (q: string) => `Ei hakua "${q}" vastaavia tuloksia.`,
   showOnMap: "Näytä kartalla",
 
   // plant sheet

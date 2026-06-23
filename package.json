@@ -1,6 +1,6 @@
 {
   "name": "arboretum",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "description": "Personal plant-mapping PWA built on Cloudflare's free tier. See plans/arboretum_prd.md.",
