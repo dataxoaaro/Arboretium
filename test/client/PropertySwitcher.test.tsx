@@ -44,19 +44,20 @@ function renderSwitcher() {
 }
 
 describe("PropertySwitcher", () => {
-  it("lazy-loads the list on open and navigates on selection", async () => {
+  it("loads the list on mount, shows the current name, and navigates on selection", async () => {
     vi.mocked(api.listProperties).mockResolvedValue([
       prop("p1", "Cottage"),
       prop("p2", "House"),
     ]);
     renderSwitcher();
 
-    // Not loaded until opened.
-    expect(api.listProperties).not.toHaveBeenCalled();
+    // Loaded eagerly so the button shows the current property's name (not the
+    // generic placeholder) without opening the dropdown.
+    expect(await screen.findByText("Cottage")).toBeInTheDocument();
+    expect(api.listProperties).toHaveBeenCalledOnce();
 
     await userEvent.click(screen.getByRole("button"));
     expect(await screen.findByText("House")).toBeInTheDocument();
-    expect(api.listProperties).toHaveBeenCalledOnce();
 
     await userEvent.click(screen.getByText("House"));
     expect(navigateMock).toHaveBeenCalledWith("/properties/p2");

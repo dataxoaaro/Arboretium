@@ -35,8 +35,8 @@ export function App() {
             {t.brand}
           </Link>
           <span
-            className="font-mono text-[10px] leading-none text-fg/40"
-            title={`Build ${__APP_VERSION__} · ${__BUILD_TIME__}`}
+            className="font-mono text-[11px] leading-none text-fg/50"
+            title={`${__APP_VERSION__} · ${__BUILD_TIME__}`}
           >
             {__APP_VERSION__}
           </span>

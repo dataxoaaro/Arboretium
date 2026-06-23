@@ -4,12 +4,16 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
-// Build-time version stamp shown in the app header so we can tell which build is
-// live (and whether a phone is on a stale PWA shell). Uses the git short SHA,
-// suffixed with "*" if the working tree was dirty at build time. Falls back to
-// "dev" outside a git checkout.
-function appVersion(): string {
+const pkg = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+) as { version: string };
+
+// Human-readable version shown in the app header (e.g. "v0.2.0"), maintained in
+// package.json — bump it on each deploy. The git SHA + build time go into the
+// tooltip only, for debugging.
+function buildSha(): string {
   try {
     const sha = execSync("git rev-parse --short HEAD", {
       encoding: "utf8",
@@ -25,8 +29,10 @@ function appVersion(): string {
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(appVersion()),
-    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
+    __BUILD_TIME__: JSON.stringify(
+      `${buildSha()} · ${new Date().toISOString()}`,
+    ),
   },
   plugins: [
     react(),

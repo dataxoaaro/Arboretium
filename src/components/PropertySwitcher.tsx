@@ -15,14 +15,24 @@ export function PropertySwitcher() {
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Lazy-load the list the first time the switcher opens.
+  // Load the list as soon as the switcher mounts in a property route, so the
+  // button shows the current property's name immediately — not the generic
+  // "Kohde" placeholder until the dropdown is opened.
   useEffect(() => {
-    if (!open || properties !== null) return;
+    if (!propertyId) return;
+    let cancelled = false;
     api
       .listProperties()
-      .then(setProperties)
-      .catch(() => setError(t.failedToLoad));
-  }, [open, properties]);
+      .then((ps) => {
+        if (!cancelled) setProperties(ps);
+      })
+      .catch(() => {
+        if (!cancelled) setError(t.failedToLoad);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [propertyId]);
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -56,10 +66,11 @@ export function PropertySwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-sm text-fg/80 hover:text-fg border border-black/15 rounded-md px-2 py-1"
+        aria-label={t.switcherLabel}
+        className="flex items-center gap-1.5 min-h-11 text-base font-semibold text-fg/90 hover:text-fg border border-black/15 rounded-lg px-3 py-1.5"
       >
-        <span className="max-w-[200px] truncate">{label}</span>
-        <span aria-hidden className="text-fg/50">
+        <span className="max-w-[150px] sm:max-w-[280px] truncate">{label}</span>
+        <span aria-hidden className="text-fg/50 text-sm">
           ▾
         </span>
       </button>
