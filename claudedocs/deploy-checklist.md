@@ -4,8 +4,19 @@
 One Worker named **`arboretium`** serves both the SPA (static assets from
 `./dist`) and the API under `/api/*` on a single origin (see ADR-0003).
 
-Deploy is **manual**. CI (`.github/workflows/ci.yml`) only lints/typechecks/
-tests/builds — it does **not** deploy. There is no GitHub auto-deploy.
+Deploy is **automatic on push to `main`** via a Cloudflare **Workers Builds**
+Git integration (shows up as the `Workers Builds: arboretium` check on each
+commit). It builds the SPA and deploys the Worker — no manual step needed.
+GitHub Actions (`.github/workflows/ci.yml`) is separate and only
+lints/typechecks/tests/builds; it does not deploy.
+
+> **Workers Builds deploys CODE ONLY — it does NOT run D1 migrations.** For any
+> schema change, run `pnpm db:migrate:remote` *before* pushing (or the new code
+> will hit columns that don't exist in prod). Migrations are forward-compatible
+> here (additive columns with defaults), so applying them ahead of the deploy is
+> safe.
+
+Manual deploy still works as a fallback / hotfix:
 
 ```bash
 pnpm build && pnpm run deploy    # `pnpm run deploy` == `wrangler deploy` (uploads ./dist)
@@ -17,8 +28,8 @@ pnpm build && pnpm run deploy    # `pnpm run deploy` == `wrangler deploy` (uploa
 > `wrangler deploy` does **not** build — it only uploads whatever is already in
 > `./dist`. Always `pnpm build` first, or you'll ship a stale bundle.
 
-Keep `main` in sync with what's deployed: `wrangler deploy` overrides anything
-set only in the dashboard.
+Prefer one path at a time: pushing already deploys, so a manual `wrangler deploy`
+on top is redundant. Either way, `wrangler deploy` overrides dashboard-only vars.
 
 ## 1. Resources (already created — one time)
 
