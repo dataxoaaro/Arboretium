@@ -62,9 +62,29 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg}"],
-        navigateFallbackDenylist: [/^\/api\//],
+        // Precache only the hashed, immutable build assets (JS/CSS/SVG). The
+        // HTML shell is deliberately NOT precached — it's served network-first
+        // (below) so an online device always loads the latest build instead of
+        // a stale cached shell. Hashed assets stay precached for offline use.
+        globPatterns: ["**/*.{js,css,svg}"],
+        // Disable vite-plugin-pwa's default cache-first SPA fallback
+        // (NavigationRoute → precached index.html). We handle navigations
+        // network-first via runtimeCaching below instead.
+        navigateFallback: null,
         runtimeCaching: [
+          {
+            // App shell (navigations): network-first so the latest index.html —
+            // and therefore the latest hashed JS — is fetched whenever online.
+            // Falls back to the last cached navigation when offline.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "app-shell",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // ARB-162: map tiles — long-lived, cache-first (cross-origin/opaque).
             urlPattern: ({ url }) =>
