@@ -154,6 +154,7 @@ export const t = {
   plantMove: "Siirrä",
   plantMovePrompt: (name: string) =>
     `Napauta kartalta uusi ruutu kohteelle "${name}".`,
+  plantMoveConfirm: (name: string) => `Siirretäänkö "${name}" tähän ruutuun?`,
   plantMoveCancel: "Peruuta siirto",
   plantMoveFailed: "Siirto epäonnistui",
 

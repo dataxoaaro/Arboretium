@@ -15,6 +15,7 @@ import {
   type PlantSheetMode,
 } from "../components/plants/PlantSheet";
 import { CellSheet } from "../components/cells/CellSheet";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { PropertyTabs } from "../components/PropertyTabs";
 import { cellAtPoint, cellCenter } from "../lib/h3";
 import { cachedRead } from "../lib/cached-read";
@@ -40,6 +41,8 @@ export function PropertyMap() {
   } | null>(null);
   // When set, the map is in "pick a new cell" mode for moving this item.
   const [moving, setMoving] = useState<Plant | null>(null);
+  // The destination cell awaiting move confirmation.
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
 
   const reloadPlants = useCallback(async () => {
     try {
@@ -142,35 +145,75 @@ export function PropertyMap() {
       ? { lat: property.center_lat, lng: property.center_lng, zoom: 17 }
       : undefined;
 
-  function handleCellTap(cell: string): void {
-    // Taps outside the property would just fail server-side; ignore them.
-    if (!includedHexes.has(cell)) return;
-    // In "move" mode the next valid cell tap relocates the item instead of
-    // opening the cell sheet.
+  function handleCellTap(
+    cell: string,
+    point: { lat: number; lng: number },
+  ): void {
+    // In "move" mode a tap picks the destination (then asks to confirm). The
+    // tapped res-15 cell may not itself be in the property — e.g. when the
+    // visible grid is a coarse parent and the tap lands between included cells —
+    // so we snap to the nearest property cell to the tap point.
     if (moving) {
-      void doMove(cell);
+      const target = includedHexes.has(cell)
+        ? cell
+        : nearestIncludedCell(point);
+      if (target) setMoveTarget(target);
       return;
     }
+    // Normal mode: taps outside the property would just fail server-side.
+    if (!includedHexes.has(cell)) return;
     setSheet({ kind: "cell", h3: cell });
   }
 
-  async function doMove(cell: string): Promise<void> {
+  /** Included res-15 cell whose centre is closest to a tapped point. */
+  function nearestIncludedCell(point: {
+    lat: number;
+    lng: number;
+  }): string | null {
+    let best: string | null = null;
+    let bestDist = Infinity;
+    for (const h3 of includedHexes) {
+      let lng: number;
+      let lat: number;
+      try {
+        [lng, lat] = cellCenter(h3);
+      } catch {
+        continue;
+      }
+      const d = (lat - point.lat) ** 2 + (lng - point.lng) ** 2;
+      if (d < bestDist) {
+        bestDist = d;
+        best = h3;
+      }
+    }
+    return best;
+  }
+
+  async function confirmMove(): Promise<void> {
     const plant = moving;
-    if (!plant) return;
+    const cell = moveTarget;
+    if (!plant || !cell) return;
     const [lng, lat] = cellCenter(cell);
     try {
       await api.updatePlant(plant.id, { h3_res15: cell, lat, lng });
-      setMoving(null);
       await reloadPlants();
     } catch {
       setError(t.plantMoveFailed);
+    } finally {
       setMoving(null);
+      setMoveTarget(null);
     }
   }
 
   function handleMarkerClick(id: string): void {
     const plant = plants?.find((p) => p.id === id);
-    if (plant) setSheet({ kind: "plant", mode: { kind: "info", plant } });
+    if (!plant) return;
+    // During a move, tapping a marker targets that marker's cell.
+    if (moving) {
+      setMoveTarget(plant.h3_res15);
+      return;
+    }
+    setSheet({ kind: "plant", mode: { kind: "info", plant } });
   }
 
   function openCreateAt(cell: string): void {
@@ -249,7 +292,10 @@ export function PropertyMap() {
             <span>{t.plantMovePrompt(moving.common_name)}</span>
             <button
               type="button"
-              onClick={() => setMoving(null)}
+              onClick={() => {
+                setMoving(null);
+                setMoveTarget(null);
+              }}
               className="underline whitespace-nowrap min-h-11"
             >
               {t.plantMoveCancel}
@@ -279,6 +325,14 @@ export function PropertyMap() {
         }
         onAddPlant={(h3) => openCreateAt(h3)}
         onChanged={() => void reloadCells()}
+      />
+      <ConfirmDialog
+        open={moving !== null && moveTarget !== null}
+        title={moving ? t.plantMoveConfirm(moving.common_name) : ""}
+        confirmLabel={t.plantMove}
+        cancelLabel={t.cancel}
+        onConfirm={() => void confirmMove()}
+        onCancel={() => setMoveTarget(null)}
       />
     </div>
   );

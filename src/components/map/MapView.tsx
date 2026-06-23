@@ -134,6 +134,11 @@ export function MapView({
   // callback without rebinding on every parent render.
   const onMarkerClickRef = useRef(onMarkerClick);
   onMarkerClickRef.current = onMarkerClick;
+  // Same pattern for cell taps — the map's click handler is bound once at init,
+  // so without a ref it would call a stale onCellTap (e.g. never seeing that a
+  // plant "move" is in progress).
+  const onCellTapRef = useRef(onCellTap);
+  onCellTapRef.current = onCellTap;
   // Latest hex inputs, read by the map's "zoomend" handler so it can redraw the
   // grid at the zoom-appropriate resolution without rebinding on every render.
   const hexInputsRef = useRef<{
@@ -357,7 +362,7 @@ export function MapView({
         { lat: e.lngLat.lat, lng: e.lngLat.lng },
         RES_FINE,
       );
-      onCellTap?.(h3, { lat: e.lngLat.lat, lng: e.lngLat.lng });
+      onCellTapRef.current?.(h3, { lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
 
     mapRef.current = map;
