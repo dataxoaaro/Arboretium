@@ -3,8 +3,31 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
+import { execSync } from "node:child_process";
+
+// Build-time version stamp shown in the app header so we can tell which build is
+// live (and whether a phone is on a stale PWA shell). Uses the git short SHA,
+// suffixed with "*" if the working tree was dirty at build time. Falls back to
+// "dev" outside a git checkout.
+function appVersion(): string {
+  try {
+    const sha = execSync("git rev-parse --short HEAD", {
+      encoding: "utf8",
+    }).trim();
+    const dirty = execSync("git status --porcelain", {
+      encoding: "utf8",
+    }).trim();
+    return dirty ? `${sha}*` : sha;
+  } catch {
+    return "dev";
+  }
+}
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion()),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),

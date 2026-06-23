@@ -27,12 +27,20 @@ export function App() {
     <div className="min-h-full">
       <OfflineBanner />
       <header className="h-14 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 flex items-center gap-3">
-        <Link
-          to={user ? "/properties" : "/"}
-          className="text-xl font-semibold text-[var(--color-accent)] font-[family-name:var(--font-display)] shrink-0"
-        >
-          {t.brand}
-        </Link>
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <Link
+            to={user ? "/properties" : "/"}
+            className="text-xl font-semibold text-[var(--color-accent)] font-[family-name:var(--font-display)]"
+          >
+            {t.brand}
+          </Link>
+          <span
+            className="font-mono text-[10px] leading-none text-fg/40"
+            title={`Build ${__APP_VERSION__} · ${__BUILD_TIME__}`}
+          >
+            {__APP_VERSION__}
+          </span>
+        </div>
         {!loading && user && (
           <Routes>
             <Route
