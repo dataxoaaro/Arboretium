@@ -118,6 +118,15 @@ export function PropertyMap() {
     return m;
   }, [plants]);
 
+  // Per occupied cell, how many items it holds — drives the count badge.
+  const cellCounts = useMemo<Map<string, number>>(() => {
+    const m = new Map<string, number>();
+    for (const p of plants ?? []) {
+      m.set(p.h3_res15, (m.get(p.h3_res15) ?? 0) + 1);
+    }
+    return m;
+  }, [plants]);
+
   const markers = useMemo<MapMarker[]>(
     () =>
       (plants ?? []).map((p) => ({
@@ -271,6 +280,7 @@ export function PropertyMap() {
           occupiedCells={occupied}
           annotatedCells={annotated}
           cellColors={cellColors}
+          cellCounts={cellCounts}
           markers={markers}
           onCellTap={handleCellTap}
           onMarkerClick={handleMarkerClick}

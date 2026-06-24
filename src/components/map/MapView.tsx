@@ -39,6 +39,7 @@ const SRC_BASEMAP = "basemap";
 const LAYER_BASEMAP = "basemap";
 const HEX_FILL_LAYER = "arb-hex-fill";
 const HEX_LINE_LAYER = "arb-hex-line";
+const HEX_COUNT_LAYER = "arb-hex-count";
 const HEX_SOURCE = "arb-hex";
 const BOUNDARY_LAYER = "arb-boundary";
 const BOUNDARY_SOURCE = "arb-boundary";
@@ -86,6 +87,8 @@ interface MapViewProps {
   annotatedCells?: ReadonlySet<H3Index>;
   /** Per occupied cell: the resolved item colour (override ?? category). */
   cellColors?: ReadonlyMap<H3Index, string>;
+  /** Per occupied cell: how many items it holds (badge shown when > 1). */
+  cellCounts?: ReadonlyMap<H3Index, number>;
   /** Called when the user taps a cell. */
   onCellTap?: (h3: H3Index, point: { lat: number; lng: number }) => void;
   /** Plant markers to render. */
@@ -105,6 +108,7 @@ export function MapView({
   occupiedCells,
   annotatedCells,
   cellColors,
+  cellCounts,
   onCellTap,
   markers,
   onMarkerClick,
@@ -147,12 +151,14 @@ export function MapView({
     occupied: ReadonlySet<H3Index>;
     annotated: ReadonlySet<H3Index>;
     colors: ReadonlyMap<H3Index, string>;
+    counts: ReadonlyMap<H3Index, number>;
   }>({
     mode: hexMode,
     included: undefined,
     occupied: new Set(),
     annotated: new Set(),
     colors: new Map(),
+    counts: new Map(),
   });
 
   // --- initial config fetch (once) ---
@@ -329,11 +335,42 @@ export function MapView({
         },
       });
 
+      // Count badge: a small number in cells holding more than one item (where
+      // markers would otherwise overlap into a single dot). Placed at the hex
+      // centroid, upper-right, always visible.
+      map.addLayer({
+        id: HEX_COUNT_LAYER,
+        type: "symbol",
+        source: HEX_SOURCE,
+        minzoom: 13,
+        filter: [">", ["get", "count"], 1],
+        layout: {
+          "text-field": ["to-string", ["get", "count"]],
+          "text-size": 13,
+          "text-offset": [0.8, -0.8],
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+        },
+        paint: {
+          "text-color": "#1a3d1a",
+          "text-halo-color": "rgba(255,255,255,0.95)",
+          "text-halo-width": 2,
+        },
+      });
+
       // The grid resolution depends on zoom; redraw once the zoom settles.
       // Read the latest inputs from the ref so this never needs rebinding.
       map.on("zoomend", () => {
         const i = hexInputsRef.current;
-        drawHexes(map, i.mode, i.included, i.occupied, i.annotated, i.colors);
+        drawHexes(
+          map,
+          i.mode,
+          i.included,
+          i.occupied,
+          i.annotated,
+          i.colors,
+          i.counts,
+        );
       });
 
       setStyleReady(true);
@@ -432,6 +469,7 @@ export function MapView({
     const occupied = occupiedCells ?? new Set<H3Index>();
     const annotated = annotatedCells ?? new Set<H3Index>();
     const colors = cellColors ?? new Map<H3Index, string>();
+    const counts = cellCounts ?? new Map<H3Index, number>();
     // Keep the ref current so the "zoomend" handler redraws with fresh data.
     hexInputsRef.current = {
       mode: hexMode,
@@ -439,16 +477,18 @@ export function MapView({
       occupied,
       annotated,
       colors,
+      counts,
     };
     const map = mapRef.current;
     if (!map || !styleReady) return;
-    drawHexes(map, hexMode, includedHexes, occupied, annotated, colors);
+    drawHexes(map, hexMode, includedHexes, occupied, annotated, colors, counts);
   }, [
     hexMode,
     includedHexes,
     occupiedCells,
     annotatedCells,
     cellColors,
+    cellCounts,
     styleReady,
   ]);
 
@@ -624,6 +664,8 @@ interface CellAgg {
   state: CellState;
   /** Colour to paint: the occupying item's colour, amber, or white. */
   color: string;
+  /** Total items in this render cell (sum across child cells). */
+  count: number;
 }
 
 function drawHexes(
@@ -633,6 +675,7 @@ function drawHexes(
   occupied: ReadonlySet<H3Index>,
   annotated: ReadonlySet<H3Index>,
   colors: ReadonlyMap<H3Index, string>,
+  counts: ReadonlyMap<H3Index, number>,
 ): void {
   const src = map.getSource(HEX_SOURCE) as maplibregl.GeoJSONSource | undefined;
   if (!src) return;
@@ -662,9 +705,18 @@ function drawHexes(
         : state === "annotated"
           ? COLOR_ANNOTATED
           : COLOR_EMPTY;
+    const cnt = counts.get(h3) ?? 0;
     const prev = byCell.get(renderCell);
-    if (!prev || STATE_RANK[state] > STATE_RANK[prev.state]) {
-      byCell.set(renderCell, { state, color });
+    if (!prev) {
+      byCell.set(renderCell, { state, color, count: cnt });
+    } else {
+      // Accumulate the item count across all child cells; keep the colour and
+      // state of the highest-priority child.
+      prev.count += cnt;
+      if (STATE_RANK[state] > STATE_RANK[prev.state]) {
+        prev.state = state;
+        prev.color = color;
+      }
     }
   }
 
@@ -678,6 +730,7 @@ function drawHexes(
         state: agg.state,
         color: agg.color,
         kind: agg.state === "empty" ? "empty" : "filled",
+        count: agg.count,
       },
     });
   }
