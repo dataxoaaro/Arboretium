@@ -16,6 +16,7 @@ import {
   RES_WIDE,
 } from "../../lib/h3";
 import { Button } from "../ui/Button";
+import { PhotoPicker } from "../photos/PhotoPicker";
 import { t } from "../../lib/strings";
 
 interface CellSheetProps {
@@ -360,21 +361,7 @@ function PhotosSection({
           ))}
         </ul>
       )}
-      <label className="w-full min-h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] flex items-center justify-center font-medium cursor-pointer">
-        {uploading ? t.photoUploading : t.cellAddPhotoHere}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          capture="environment"
-          disabled={uploading}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void onFileChosen(f);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
-      </label>
+      <PhotoPicker onFile={(f) => void onFileChosen(f)} uploading={uploading} />
     </Section>
   );
 }

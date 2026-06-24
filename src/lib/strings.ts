@@ -160,6 +160,8 @@ export const t = {
 
   // photo timeline (shared by plant + cell)
   photoAdd: "Lisää kuva",
+  photoTakePhoto: "Ota kuva",
+  photoFromGallery: "Galleriasta",
   photoUploading: "Ladataan…",
   photoOldestFirst: "Vanhin ensin",
   photoNewestFirst: "Uusin ensin",

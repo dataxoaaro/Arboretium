@@ -11,6 +11,7 @@ import { api, type Photo, type Plant, type PlantInput } from "../../lib/api";
 import { preparePhoto } from "../../lib/photos";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { PhotoPicker } from "../photos/PhotoPicker";
 import {
   CATEGORIES,
   PALETTE,
@@ -314,23 +315,8 @@ function PhotoTimeline({ plant }: { plant: Plant }) {
 
   return (
     <div className="space-y-3 text-sm">
-      <div className="flex items-center gap-2">
-        <label className="min-h-12 px-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-black/[0.03] inline-flex items-center font-medium cursor-pointer">
-          {uploading ? t.photoUploading : t.photoAdd}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            capture="environment"
-            disabled={uploading}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onFileChosen(f);
-              e.target.value = "";
-            }}
-            className="hidden"
-          />
-        </label>
-        <div className="flex-1" />
+      <PhotoPicker onFile={(f) => void onFileChosen(f)} uploading={uploading} />
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
